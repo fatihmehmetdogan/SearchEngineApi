@@ -1,0 +1,103 @@
+# Search Engine API Test File
+
+# Test basic API info
+GET http://localhost:8080/api/
+Accept: application/json
+
+###
+
+# Test health check
+GET http://localhost:8080/api/health
+Accept: application/json
+
+###
+
+# Test search without query
+GET http://localhost:8080/api/search
+Accept: application/json
+
+###
+
+# Test search with query
+GET http://localhost:8080/api/search?q=symfony
+Accept: application/json
+
+###
+
+# Test search with filters
+GET http://localhost:8080/api/search?q=framework&category=Framework&tags=php,web
+Accept: application/json
+
+###
+
+# Test pagination
+GET http://localhost:8080/api/search?q=web&page=1&limit=5
+Accept: application/json
+
+###
+
+# Get all documents
+GET http://localhost:8080/api/documents
+Accept: application/json
+
+###
+
+# Get documents with pagination
+GET http://localhost:8080/api/documents?page=1&limit=3
+Accept: application/json
+
+###
+
+# Get specific document
+GET http://localhost:8080/api/documents/1
+Accept: application/json
+
+###
+
+# Create new document
+POST http://localhost:8080/api/documents
+Content-Type: application/json
+
+{
+  "title": "Test Document",
+  "content": "This is a test document created via API",
+  "category": "Test",
+  "tags": ["test", "api", "example"],
+  "url": "https://example.com/test"
+}
+
+###
+
+# Get search suggestions
+GET http://localhost:8080/api/search/suggestions?q=sym
+Accept: application/json
+
+###
+
+# Get popular categories
+GET http://localhost:8080/api/search/categories
+Accept: application/json
+
+###
+
+# Get all tags
+GET http://localhost:8080/api/search/tags
+Accept: application/json
+
+###
+
+# Get search statistics
+GET http://localhost:8080/api/search/stats
+Accept: application/json
+
+###
+
+# Get popular queries
+GET http://localhost:8080/api/search/popular
+Accept: application/json
+
+###
+
+# Get documents by category
+GET http://localhost:8080/api/documents/category/Framework
+Accept: application/json

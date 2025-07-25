@@ -1,0 +1,46 @@
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+parameters:
+    app.json_provider.url: 'http://localhost:8000/mock/json'
+    app.xml_provider.url: 'http://localhost:8000/mock/xml'
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+
+    # Provider services
+    App\Service\Provider\JsonProvider:
+        arguments:
+            $apiUrl: '%app.json_provider.url%'
+            $requestLimit: 1000
+        tags: ['app.provider']
+
+    App\Service\Provider\XmlProvider:
+        arguments:
+            $apiUrl: '%app.xml_provider.url%'
+            $requestLimit: 1000
+        tags: ['app.provider']
+
+    # Provider Manager service
+    App\Service\Provider\ProviderManager:
+        arguments:
+            $entityManager: '@doctrine.orm.entity_manager'
+            $scoringService: '@App\Service\ScoringService'
+            $logger: '@logger'
+        calls:
+            - [addProvider, ['@App\Service\Provider\JsonProvider']]
+            - [addProvider, ['@App\Service\Provider\XmlProvider']]

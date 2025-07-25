@@ -1,0 +1,103 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Search Engine Dashboard{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Content Dashboard</h1>
+        </div>
+        <div class="col text-end">
+            <div class="btn-group">
+                <a href="{{ path('dashboard_index', {type: 'video'}) }}" 
+                   class="btn btn-outline-primary {% if currentType == 'video' %}active{% endif %}">
+                    <i class="bi bi-play-circle"></i> Videos
+                </a>
+                <a href="{{ path('dashboard_index', {type: 'text'}) }}" 
+                   class="btn btn-outline-primary {% if currentType == 'text' %}active{% endif %}">
+                    <i class="bi bi-file-text"></i> Text
+                </a>
+                <a href="{{ path('dashboard_index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-grid"></i> All
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>
+                                <a href="{{ path('dashboard_index', {
+                                    sort: 'title',
+                                    order: currentSort == 'title' and currentOrder == 'asc' ? 'desc' : 'asc',
+                                    type: currentType,
+                                    page: currentPage
+                                }) }}" class="text-decoration-none text-dark">
+                                    Title
+                                    {% if currentSort == 'title' %}
+                                        <i class="bi bi-arrow-{{ currentOrder == 'asc' ? 'up' : 'down' }}"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th>Type</th>
+                            <th>
+                                <a href="{{ path('dashboard_index', {
+                                    sort: 'score',
+                                    order: currentSort == 'score' and currentOrder == 'asc' ? 'desc' : 'asc',
+                                    type: currentType,
+                                    page: currentPage
+                                }) }}" class="text-decoration-none text-dark">
+                                    Score
+                                    {% if currentSort == 'score' %}
+                                        <i class="bi bi-arrow-{{ currentOrder == 'asc' ? 'up' : 'down' }}"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in documents %}
+                            <tr>
+                                <td>{{ doc.title }}</td>
+                                <td>
+                                    <span class="badge bg-{{ doc.type == 'video' ? 'danger' : 'info' }}">
+                                        <i class="bi bi-{{ doc.type == 'video' ? 'play-circle' : 'file-text' }}"></i>
+                                        {{ doc.type }}
+                                    </span>
+                                </td>
+                                <td>{{ doc.score|number_format(2) }}</td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center">No documents found</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if totalPages > 1 %}
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% for i in 1..totalPages %}
+                            <li class="page-item {% if i == currentPage %}active{% endif %}">
+                                <a class="page-link" href="{{ path('dashboard_index', {
+                                    page: i,
+                                    sort: currentSort,
+                                    order: currentOrder,
+                                    type: currentType
+                                }) }}">{{ i }}</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

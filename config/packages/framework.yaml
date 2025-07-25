@@ -1,0 +1,20 @@
+framework:
+    secret: '%env(APP_SECRET)%'
+    router:
+        utf8: true
+    serializer:
+        enabled: true
+    validation:
+        enabled: true
+        enable_attributes: true
+    property_access: ~
+    property_info: ~
+
+when@dev:
+    framework:
+        router:
+            strict_requirements: true
+
+when@test:
+    framework:
+        test: true

@@ -1,0 +1,61 @@
+# Symfony configuration
+/config/secrets/
+/var/
+/vendor/
+/.env.local
+/.env.local.php
+/.env.*.local
+
+# Docker
+/.env.docker
+
+# Cache and logs
+/var/cache/
+/var/log/
+
+# Session files
+/var/sessions/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Testing
+/phpunit.xml
+/.phpunit.result.cache
+
+# Composer
+composer.phar
+
+# Docker volumes
+mysql_data/
+
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###

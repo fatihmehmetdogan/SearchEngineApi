@@ -1,0 +1,12 @@
+api:
+    resource:
+        path: ../src/Controller/
+        namespace: App\Controller
+    type: attribute
+    prefix: /api
+
+swagger_doc:
+    resource:
+        path: ../src/Controller/
+        namespace: App\Controller
+    type: attribute

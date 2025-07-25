@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: search_engine_api
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - ./var/cache:/var/www/html/var/cache
+      - ./var/log:/var/www/html/var/log
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - search_engine_network
+    depends_on:
+      - mysql
+    environment:
+      - APP_ENV=dev
+      - DATABASE_URL=mysql://search_user:search_password@mysql:3306/search_engine_db
+    user: "1000:1000"  # Linux user:group ID
+
+  nginx:
+    image: nginx:alpine
+    container_name: search_engine_nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - search_engine_network
+    depends_on:
+      - app
+
+  mysql:
+    image: mysql:8.0
+    container_name: search_engine_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: search_engine_db
+      MYSQL_USER: search_user
+      MYSQL_PASSWORD: search_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - search_engine_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: search_engine_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: search_user
+      PMA_PASSWORD: search_password
+    ports:
+      - "8081:80"
+    networks:
+      - search_engine_network
+    depends_on:
+      - mysql
+
+###> doctrine/doctrine-bundle ###
+  database:
+    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      # You should definitely change the password in production
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+    volumes:
+      - database_data:/var/lib/postgresql/data:rw
+      # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
+      # - ./docker/db/data:/var/lib/postgresql/data:rw
+###< doctrine/doctrine-bundle ###
+
+volumes:
+  mysql_data:
+
+###> doctrine/doctrine-bundle ###
+  database_data:
+###< doctrine/doctrine-bundle ###
+    driver: local
+
+networks:
+  search_engine_network:
+    driver: bridge
