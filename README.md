@@ -1,31 +1,43 @@
 # Search Engine API
 
-Bu proje, PHP Symfony framework'ü ve MySQL veritabanı kullanarak geliştirilmiş bir arama motoru API'sidir. Docker kullanarak kolayca çalıştırılabilir.
+Bu proje, PHP Symfony framework'ü ve MySQL veritabanı kullanarak geliştirilmiş, güçlü bir arama motoru API'sidir. Docker ve Docker Compose sayesinde kolayca ayağa kaldırılabilir ve yönetilebilir.
 
-## Özellikler
+## Proje Vizyonu ve Mimari
 
-- **Full-text arama**: MySQL FULLTEXT indeksleri kullanarak hızlı arama
-- **Gelişmiş filtreleme**: Kategori, etiket, tarih filtrelemeleri
-- **RESTful API**: Modern REST API standartlarına uygun
-- **API Dokumentasyonu**: OpenAPI/Swagger entegrasyonu
-- **Arama analitikleri**: Arama sorgularının loglanması ve istatistikleri
+Bu API, farklı içerik sağlayıcılardan (mock olarak implemente edildi) gelen verileri birleştirerek, kullanıcıların arama sorgularına göre en uygun içerikleri bulan, bunları belirli kriterlere göre sıralayan ve sunan bir servis olarak tasarlandı.
+
+## Temel Özellikler
+- **İçerik Arama ve Sıralama:**: Anahtar kelimeye göre arama, içerik türüne (video/metin) göre filtreleme ve dinamik sıralama (popülerlik/alakalılık skoru, tarih, başlık).
+- **İçerik Puanlama Algoritması**: Sağlayıcılardan gelen farklı formatlardaki verileri standart bir puan sistemine çeviren özel bir algoritma (Final Skor hesaplaması).
+- **Provider Entegrasyonu**: JSON ve XML formatlarında iki farklı mock sağlayıcıdan veri alabilen, genişletilebilir bir yapı.
+- **Arama Analitikleri**: Arama sorgularının loglanması ve istatistiklerinin tutulması.
+- **Basit Yönetim Dashboard'u**: API'nin üzerine geliştirilmiş, arama ve sonuçları listeleme imkanı sunan temel bir web arayüzü.
 - **Dockerize edilmiş**: Kolay kurulum ve deployment
-- **CORS desteği**: Frontend entegrasyonu için
 
-## Teknolojiler
+## Neden Bu Teknolojiler Tercih Edildi?
 
-- **PHP 8.2**
-- **Symfony 7.0**
-- **MySQL 8.0**
-- **Docker & Docker Compose**
-- **Nginx**
-- **PHPMyAdmin**
+- **PHP 8.2 & Symfony 7.0**: Hızlı geliştirme, modüler yapı, geniş topluluk desteği ve güçlü bağımlılık enjeksiyon (Dependency Injection) özellikleriyle API geliştirme için sağlam bir temel sunar. 
+- **MySQL 8.0**: İlişkisel veri yönetimi için güvenilir, performant ve yaygın kullanılan bir veritabanıdır. Özellikle arama ve filtreleme için indeksleme kabiliyetleri önemlidir.
+- **Docker & Docker Compose**: Geliştirme ortamının tutarlı ve kolayca kurulabilir olmasını sağlar. Bağımlılıkların (veritabanı, web sunucusu, PHP-FPM) izole bir şekilde çalışmasına olanak tanır.
+- **Nginx**: Yüksek performanslı bir web sunucusu olarak, gelen istekleri PHP-FPM'ye yönlendirir ve statik dosyaları hızlı servis eder.
+- **PHPMyAdmin**: MySQL veritabanını görsel bir arayüz üzerinden kolayca yönetmek için kullanılır.
 
-## Kurulum
+## Kurulum ve Çalıştırma
+
+### İşletim Sistemi Notu
+
+
+Bu dokümantasyondaki tüm docker compose komutları macOS ve Linux sistemleri için geçerlidir.
+Windows kullanıcıları için volume tanımlamaları ve bazı yol (path) farkları nedeniyle docker-compose.windows.yml gibi özel bir dosya gerekebilir.
+
+Eğer Windows kullanıyorsanız:
+
+- docker-compose.windows.yml gibi özel bir yapılandırma dosyası gerekebilir.
+- Alternatif olarak WSL2 (Windows Subsystem for Linux) üzerinden çalışarak, dokümantasyondaki komutları doğrudan kullanabilirsiniz.
+
 
 ### Gereksinimler
-- Docker
-- Docker Compose
+- **Docker & Docker Desktop**: macOS, Windows veya Linux için yüklü ve çalışır durumda olmalı.
 
 ### Adımlar
 
@@ -37,159 +49,104 @@ cd API
 
 2. **Docker container'ları başlatın**
 ```bash
-docker-compose up -d
+docker compose up -d --build
 ```
 
 3. **Composer bağımlılıklarını yükleyin**
 ```bash
-docker-compose exec app composer install
+docker compose exec app composer install
 ```
 
 4. **Veritabanı migration'larını çalıştırın**
 ```bash
-docker-compose exec app php bin/console doctrine:migrations:migrate
+docker compose exec app php bin/console doctrine:migrations:migrate
 ```
+
+5. **Örnek Verileri Yükleyin (Fixtures)**
+- Uygulamanın çalışır durumda olduğunu görmek için mock sağlayıcılardan veri çeken ve puanlayan örnek verileri veritabanına yükleyin.
+```bash
+docker compose exec app php bin/console doctrine:fixtures:load --purge-with-truncate
+```
+
+## Projeye Erişim
+
+- **Ana API Erişimi**: http://localhost:8080/api/
+- **API Dokümantasyonu (Swagger UI)**: http://localhost:8080/api/doc
+- **Arama Dashboard'u**: http://localhost:8080/dashboard
+- **PHPMyAdmin**: http://localhost:8081 (MySQL veritabanınızı yönetmek için)
 
 ## API Endpoints
 
-### Arama Endpoints
+### Genel API Bilgisi
 
-- `GET /api/search` - Dokuman arama
-- `GET /api/search/suggestions` - Arama önerileri
+- `GET /api/` - API'nin adı, sürümü ve genel endpoint listesi.
+- `GET /api/health` - API servislerinin (API, veritabanı) sağlık durumu kontrolü.
 - `GET /api/search/popular` - Popüler arama sorguları
 - `GET /api/search/categories` - Popüler kategoriler
 - `GET /api/search/tags` - Mevcut etiketler
 - `GET /api/search/stats` - Arama istatistikleri
 
-### Dokuman Endpoints
+### Arama Endpoints
 
-- `GET /api/documents` - Tüm dokomanları listele
-- `GET /api/documents/{id}` - Belirli dokomanı getir
-- `POST /api/documents` - Yeni dokoman oluştur
-- `PUT /api/documents/{id}` - Dokomanı güncelle
-- `DELETE /api/documents/{id}` - Dokomanı sil
-- `GET /api/documents/category/{category}` - Kategoriye göre dokomanlar
+- `GET /api/search` - Doküman arama, filtreleme ve sıralama.
+- `GET /api/search/suggestions` - Arama önerileri.
+- `GET /api/search/popular` - Popüler arama sorguları listesi.
+- `GET /api/search/categories` - Popüler kategoriler listesi.
+- `GET /api/search/tags` - Mevcut tüm etiketler listesi.
+- `GET /api/search/stats` - Genel arama istatistikleri.
 
-## Arama Parametreleri
+### Doküman Yönetim Endpoints (CRUD)
 
-### Temel Arama
-```
-GET /api/search?q=symfony&page=1&limit=20
-```
+- `GET /api/documents` - Tüm dokümanları listeleme.
+- `GET /api/documents/{id}` - Belirli bir dokümanı ID'sine göre getirme.
+- `POST /api/documents` - Yeni doküman oluşturma.
+- `PUT /api/documents/{id}` - Mevcut bir dokümanı ID'sine göre güncelleme.
+- `DELETE /api/documents/{id}` - Belirli bir dokümanı ID'sine göre silme.
+- `GET /api/documents/category/{category}` - Kategoriye göre dokümanları listeleme.
 
-### Filtreleme
-```
-GET /api/search?q=framework&category=Technology&tags=php,web&date_from=2024-01-01&date_to=2024-12-31
-```
+## Arama Parametreleri (GET /api/search)
+
+| Parametre  | Tip     | Açıklama                                               | Örnek Değer      | Varsayılan     |
+|------------|---------|--------------------------------------------------------|------------------|----------------|
+| `q`        | string  | Arama sorgusu (başlık ve içerikte aranır)             | test document    | `''`           |
+| `type`     | string  | İçerik türüne göre filtrele (`video` veya `text`)      | video            | `''`           |
+| `category` | string  | Kategoriye göre filtrele                              | Technology       | `''`           |
+| `tags`     | string  | Etiketlere göre filtrele (virgülle ayrılmış)          | php,backend      | `''`           |
+| `page`     | integer | Sayfa numarası                                         | 2                | `1`            |
+| `limit`    | integer | Sayfa başına sonuç sayısı                              | 10               | `20`           |
+| `sort`     | string  | Sıralama kriteri (`finalScore`, `createdAt`, `title`, `type`) | finalScore | `finalScore`    |
+| `order`    | string  | Sıralama yönü (`asc` veya `desc`)                     | desc             | `desc`         |
+| `date_from`| string  | Başlangıç tarihi (YYYY-MM-DD formatında, dahil)       | 2024-01-01       | `''`           |
+| `date_to`  | string  | Bitiş tarihi (YYYY-MM-DD formatında, dahil)           | 2024-12-31       | `''`           |
 
 ## Örnek Kullanım
 
-### Dokuman Oluşturma
+### Doküman Oluşturma (POST /api/documents)
 ```bash
 curl -X POST http://localhost:8080/api/documents \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "Yeni Dokuman",
-    "content": "Bu bir test dokomanıdır.",
-    "category": "Test",
-    "tags": ["test", "api"],
-    "url": "https://example.com"
+    "title": "Yeni Doküman Başlığı",
+    "content": "Bu, API üzerinden eklenen bir test dokümanıdır. Harika bir içerik.",
+    "type": "text",
+    "url": "https://yeni-dokuman.com",
+    "category": "API Geliştirme",
+    "tags": ["symfony", "api", "test"]
   }'
 ```
 
 ### Arama Yapma
 ```bash
-curl "http://localhost:8080/api/search?q=symfony&category=Framework"
+# Sadece anahtar kelime ile arama
+curl "http://localhost:8080/api/search?q=test"
+
+# Anahtar kelime ve tür filtresi ile arama
+curl "http://localhost:8080/api/search?q=document&type=video"
+
+# Kategori ve sayfalama ile arama
+curl "http://localhost:8080/api/search?category=Technology&page=2&limit=5"
+
+# Etiket, tarih aralığı ve sıralama ile arama
+curl "http://localhost:8080/api/search?tags=api,backend&date_from=2024-01-01&date_to=2024-07-30&sort=createdAt&order=asc"
 ```
 
-## Servisler
-
-Proje aşağıdaki servisleri içerir:
-
-- **API**: http://localhost:8080
-- **PHPMyAdmin**: http://localhost:8081
-- **MySQL**: localhost:3307
-
-## Veritabanı
-
-### Tablolar
-
-1. **documents**: Arama yapılacak dokomanlar
-   - id, title, content, url, category, tags, created_at, updated_at
-   
-2. **search_queries**: Arama sorguları logu
-   - id, query_text, filters, results_count, execution_time, ip_address, user_agent, created_at
-
-### Örnek Veriler
-
-Proje başlatıldığında otomatik olarak örnek veriler yüklenir.
-
-## API Dokumentasyonu
-
-API dokumentasyonuna şu adresten erişebilirsiniz:
-http://localhost:8080/api/doc
-
-## Geliştirme
-
-### Yeni Migration Oluşturma
-```bash
-docker-compose exec app php bin/console make:migration
-```
-
-### Migration Çalıştırma
-```bash
-docker-compose exec app php bin/console doctrine:migrations:migrate
-```
-
-### Cache Temizleme
-```bash
-docker-compose exec app php bin/console cache:clear
-```
-
-## Performans
-
-- **Full-text indeksler**: Hızlı metin arama
-- **Veritabanı indeksleri**: Kategori ve tarih filtrelemesi için
-- **Pagination**: Büyük sonuç setleri için
-- **Query optimizasyonu**: Efficient SQL sorguları
-
-## Güvenlik
-
-- **Input validation**: Symfony Validator kullanarak
-- **SQL Injection koruması**: Doctrine ORM parametreleri
-- **CORS politikaları**: Yapılandırılabilir
-- **Rate limiting**: İsteğe bağlı implementasyon
-
-## Test Etme
-
-Container'ı başlattıktan sonra şu şekilde test edebilirsiniz:
-
-```bash
-# API durumunu kontrol et
-curl http://localhost:8080/api/search
-
-# Dokomanları listele
-curl http://localhost:8080/api/documents
-
-# Arama yap
-curl "http://localhost:8080/api/search?q=symfony"
-```
-
-## Troubleshooting
-
-### Container'lar başlamıyorsa:
-```bash
-docker-compose down
-docker-compose up --build
-```
-
-### Veritabanı bağlantı sorunu:
-```bash
-docker-compose exec mysql mysql -u search_user -p search_engine_db
-```
-
-### Log'ları kontrol etme:
-```bash
-docker-compose logs app
-docker-compose logs mysql
-```
