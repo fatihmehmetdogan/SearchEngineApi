@@ -2,7 +2,7 @@
 
 Bu proje, PHP Symfony framework'ü ve MySQL veritabanı kullanarak geliştirilmiş, güçlü bir arama motoru API'sidir. Docker ve Docker Compose sayesinde kolayca ayağa kaldırılabilir ve yönetilebilir.
 
-## Proje Vizyonu ve Mimari
+## Proje Özellikleri
 
 Bu API, farklı içerik sağlayıcılardan (mock olarak implemente edildi) gelen verileri birleştirerek, kullanıcıların arama sorgularına göre en uygun içerikleri bulan, bunları belirli kriterlere göre sıralayan ve sunan bir servis olarak tasarlandı.
 
