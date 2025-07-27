@@ -12,26 +12,42 @@ Accept: application/json
 
 ###
 
-# Test search without query
+# Test search without query (all documents, sorted by finalScore DESC)
 GET http://localhost:8080/api/search
 Accept: application/json
 
 ###
 
-# Test search with query
-GET http://localhost:8080/api/search?q=symfony
+# Test search with query (e.g., "Test")
+# Fixtures'ınızda "Test Document 1" gibi başlıklar olduğu için bu daha iyi bir test olacak.
+GET http://localhost:8080/api/search?q=Test
 Accept: application/json
 
 ###
 
-# Test search with filters
-GET http://localhost:8080/api/search?q=framework&category=Framework&tags=php,web
+# Test search with filters (use values from your fixtures)
+# Fixtures'ınızdaki kategoriler: Technology, Science, History
+# Fixtures'ınızdaki etiketler: tag0, tag1, tag2, tag3, tag4
+# Örneğin: category=Technology, tags=tag0,tag1, type=video
+GET http://localhost:8080/api/search?q=Document&category=Technology&tags=tag0,tag1&type=video
 Accept: application/json
 
 ###
 
 # Test pagination
-GET http://localhost:8080/api/search?q=web&page=1&limit=5
+GET http://localhost:8080/api/search?q=Document&page=1&limit=5
+Accept: application/json
+
+###
+
+# Test sorting (by finalScore DESC)
+GET http://localhost:8080/api/search?q=Document&sort=finalScore&order=desc
+Accept: application/json
+
+###
+
+# Test sorting (by createdAt ASC)
+GET http://localhost:8080/api/search?q=Document&sort=createdAt&order=asc
 Accept: application/json
 
 ###
@@ -48,56 +64,76 @@ Accept: application/json
 
 ###
 
-# Get specific document
+# Get specific document (Assuming document with ID 1 exists after running fixtures)
 GET http://localhost:8080/api/documents/1
 Accept: application/json
 
 ###
 
-# Create new document
+# Create new document (Added 'type' field, as it's required)
 POST http://localhost:8080/api/documents
 Content-Type: application/json
 
 {
-  "title": "Test Document",
-  "content": "This is a test document created via API",
-  "category": "Test",
-  "tags": ["test", "api", "example"],
-  "url": "https://example.com/test"
+  "title": "Yeni API Test Dokümanı",
+  "content": "Bu, Postman/VS Code REST Client ile oluşturulan bir dokümandır. Başarılı test!",
+  "type": "text",
+  "category": "Test API",
+  "tags": ["postman", "test", "symfony"],
+  "url": "https://api-test.com/new-doc"
 }
 
 ###
 
-# Get search suggestions
-GET http://localhost:8080/api/search/suggestions?q=sym
+# Update an existing document (Assuming document with ID 1 exists)
+PUT http://localhost:8080/api/documents/1
+Content-Type: application/json
+
+{
+  "title": "Güncellenmiş Doküman Başlığı",
+  "content": "Bu, API üzerinden güncellenen bir test dokümanıdır. Başarılı güncelleme!",
+  "category": "Güncel Kategori"
+}
+
+###
+
+# Delete a document (Assuming document with ID 2 exists, be careful with IDs)
+# Make sure to test this after verifying create/get functions.
+# DELETE http://localhost:8080/api/documents/2
+# Accept: application/json
+
+###
+
+# Get search suggestions (based on your fixture titles like "Test Document")
+GET http://localhost:8080/api/search/suggestions?q=Test
 Accept: application/json
 
 ###
 
-# Get popular categories
+# Get popular categories (will show categories from your fixtures)
 GET http://localhost:8080/api/search/categories
 Accept: application/json
 
 ###
 
-# Get all tags
+# Get all tags (will show tags from your fixtures)
 GET http://localhost:8080/api/search/tags
 Accept: application/json
 
 ###
 
-# Get search statistics
+# Get search statistics (will show stats after you perform some searches)
 GET http://localhost:8080/api/search/stats
 Accept: application/json
 
 ###
 
-# Get popular queries
+# Get popular queries (will show queries after you perform some searches)
 GET http://localhost:8080/api/search/popular
 Accept: application/json
 
 ###
 
-# Get documents by category
-GET http://localhost:8080/api/documents/category/Framework
+# Get documents by category (e.g., "Technology" from your fixtures)
+GET http://localhost:8080/api/documents/category/Technology
 Accept: application/json

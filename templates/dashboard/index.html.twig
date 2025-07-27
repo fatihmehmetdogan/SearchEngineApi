@@ -121,7 +121,7 @@
 
                 fetch(`/api/search?${params}`)
                     .then(response => {
-                        if (!response.ok) { // HTTP hatası varsa yakala
+                        if (!response.ok) {
                             throw new Error(`HTTP error! status: ${response.status}`);
                         }
                         return response.json();
@@ -129,7 +129,6 @@
                     .then(data => {
                         loadingDiv.style.display = 'none';
                         displayResults(data);
-                        // Pagination logic here (if you implement it)
                     })
                     .catch(error => {
                         loadingDiv.style.display = 'none';
@@ -148,9 +147,9 @@
 
                 data.data.forEach(item => {
                     const typeIcon = item.type === 'video' ? '🎥' : '📄';
-                    const typeBadge = item.type === 'video' ? 'bg-primary' : 'bg-secondary'; // Bootstrap 5 için 'bg-' sınıfı
+                    const typeBadge = item.type === 'video' ? 'bg-primary' : 'bg-secondary';
 
-                    // Tarih formatlama (isteğe bağlı, daha iyi görünüm için)
+                    // Tarih formatlama
                     const formattedDate = item.publishedAt ? new Date(item.publishedAt.date || item.publishedAt).toLocaleDateString('tr-TR') : 'Bilinmiyor';
 
                     html += `
@@ -161,17 +160,17 @@
                                         <h6 class="card-title">${typeIcon} ${item.title || 'Başlık Yok'}</h6>
                                         <div>
                                             <span class="badge ${typeBadge}">${item.type || 'Bilinmiyor'}</span>
-                                            <span class="badge bg-success ms-1">Skor: ${parseFloat(item.finalScore).toFixed(2)}</span> {# 'item.score' yerine 'item.finalScore' #}
+                                            <span class="badge bg-success ms-1">Skor: ${parseFloat(item.finalScore).toFixed(2)}</span>
                                         </div>
                                     </div>
                                     <p class="card-text text-muted small">${(item.content || '').substring(0, 100)}...</p> {# Null kontrolü eklendi #}
-                                    <p class="card-text small">Yayınlanma Tarihi: ${formattedDate}</p> {# Tarih eklendi #}
+                                    <p class="card-text small">Yayınlanma Tarihi: ${formattedDate}</p>
                                     <div class="row text-center mt-2">
                                         ${item.type === 'video' ? `
                                             <div class="col-6"><small><strong>${item.views || 0}</strong><br>Görüntülenme</small></div>
                                             <div class="col-6"><small><strong>${item.likes || 0}</strong><br>Beğeni</small></div>
                                         ` : `
-                                            <div class="col-6"><small><strong>${item.readingTime || 0}</strong><br>Okuma Süresi</small></div> {# 'reading_time' yerine 'readingTime' #}
+                                            <div class="col-6"><small><strong>${item.readingTime || 0}</strong><br>Okuma Süresi</small></div>
                                             <div class="col-6"><small><strong>${item.reactions || 0}</strong><br>Reaksiyon</small></div>
                                         `}
                                     </div>
@@ -186,7 +185,7 @@
                 resultsDiv.innerHTML = html;
             }
 
-            // Sayfalama fonksiyonu (örnek, tam implementasyon için daha fazla kod gerekir)
+            // Sayfalama fonksiyonu
             function setupPagination(meta) {
                 const paginationNav = document.getElementById('pagination');
                 const paginationUl = paginationNav.querySelector('ul');

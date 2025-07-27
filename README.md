@@ -68,6 +68,11 @@ docker compose exec app php bin/console doctrine:migrations:migrate
 docker compose exec app php bin/console doctrine:fixtures:load --purge-with-truncate
 ```
 
+5. **Cache Temizleyin**
+```bash
+docker compose exec app php bin/console cache:clear
+```
+
 ## Projeye Erişim
 
 - **Ana API Erişimi**: http://localhost:8080/api/
