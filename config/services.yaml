@@ -4,8 +4,6 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
-    app.json_provider.url: 'http://localhost:8000/mock/json'
-    app.xml_provider.url: 'http://localhost:8000/mock/xml'
 
 services:
     # default configuration for services in *this* file
@@ -22,25 +20,18 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
-    # Provider services
+    # Provider configurations
     App\Service\Provider\JsonProvider:
         arguments:
-            $apiUrl: '%app.json_provider.url%'
-            $requestLimit: 1000
-        tags: ['app.provider']
+            $apiUrl: '%env(JSON_PROVIDER_API_URL)%'
+            $requestLimit: '%env(int:JSON_PROVIDER_REQUEST_LIMIT)%'
 
     App\Service\Provider\XmlProvider:
         arguments:
-            $apiUrl: '%app.xml_provider.url%'
-            $requestLimit: 1000
-        tags: ['app.provider']
+            $apiUrl: '%env(XML_PROVIDER_API_URL)%'
+            $requestLimit: '%env(int:XML_PROVIDER_REQUEST_LIMIT)%'
 
-    # Provider Manager service
     App\Service\Provider\ProviderManager:
-        arguments:
-            $entityManager: '@doctrine.orm.entity_manager'
-            $scoringService: '@App\Service\ScoringService'
-            $logger: '@logger'
         calls:
             - [addProvider, ['@App\Service\Provider\JsonProvider']]
             - [addProvider, ['@App\Service\Provider\XmlProvider']]

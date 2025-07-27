@@ -7,12 +7,14 @@
         "php": ">=8.2",
         "ext-ctype": "*",
         "ext-iconv": "*",
+        "beberlei/doctrineextensions": "^1.5",
         "doctrine/annotations": "^2.0",
         "doctrine/doctrine-bundle": "^2.10",
         "doctrine/doctrine-fixtures-bundle": "^3.5",
         "doctrine/doctrine-migrations-bundle": "^3.2",
         "doctrine/orm": "^2.16",
         "elasticsearch/elasticsearch": "^8.8",
+        "nelmio/api-doc-bundle": "^4.33",
         "nelmio/cors-bundle": "^2.3",
         "phpdocumentor/reflection-docblock": "^5.3",
         "symfony/asset": "7.0.*",
@@ -20,6 +22,7 @@
         "symfony/dotenv": "7.0.*",
         "symfony/flex": "^2",
         "symfony/framework-bundle": "7.0.*",
+        "symfony/http-client": "7.0.*",
         "symfony/property-access": "7.0.*",
         "symfony/property-info": "7.0.*",
         "symfony/runtime": "7.0.*",
@@ -29,8 +32,8 @@
         "symfony/yaml": "7.0.*"
     },
     "require-dev": {
-        "symfony/maker-bundle": "^1.50",
         "phpunit/phpunit": "^10.0",
+        "symfony/maker-bundle": "^1.64",
         "symfony/phpunit-bridge": "^7.0"
     },
     "config": {

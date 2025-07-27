@@ -66,9 +66,11 @@ class Document
 
     #[ORM\Column(type: 'float', options: ['default' => 0])]
     #[Groups(['document:read', 'search:read'])]
-    private float $score = 0;
+    private float $finalScore = 0;
 
-
+    #[ORM\Column(type: 'datetime_immutable')]
+    #[Groups(['document:read', 'document:write', 'search:read'])]
+    private ?\DateTimeImmutable $publishedAt = null;
 
     #[ORM\Column(type: 'datetime_immutable')]
     #[Groups(['document:read'])]
@@ -82,6 +84,7 @@ class Document
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
+        $this->publishedAt = new \DateTimeImmutable(); // Varsayılan olarak şimdiki zamanı ayarla
     }
 
     public function getId(): ?int
@@ -144,7 +147,7 @@ class Document
         return $this;
     }
 
-        public function getType(): string
+    public function getType(): string
     {
         return $this->type;
     }
@@ -160,20 +163,21 @@ class Document
         return $this->views;
     }
 
-    public function setViews(int $views): static
+    public function setViews(?int $views): static
     {
-        $this->views = $views;
+        $this->views = $views ?? 0;
         return $this;
     }
+
 
     public function getLikes(): int
     {
         return $this->likes;
     }
 
-    public function setLikes(int $likes): static
+    public function setLikes(?int $likes): static
     {
-        $this->likes = $likes;
+        $this->likes = $likes ?? 0;
         return $this;
     }
 
@@ -199,17 +203,27 @@ class Document
         return $this;
     }
 
-    public function getScore(): float
+    public function getFinalScore(): float
     {
-        return $this->score;
+        return $this->finalScore;
     }
 
-    public function setScore(float $score): static
+    public function setFinalScore(float $finalScore): static
     {
-        $this->score = $score;
+        $this->finalScore = $finalScore;
         return $this;
     }
 
+    public function getPublishedAt(): ?\DateTimeImmutable
+    {
+        return $this->publishedAt;
+    }
+
+    public function setPublishedAt(\DateTimeImmutable $publishedAt): static
+    {
+        $this->publishedAt = $publishedAt;
+        return $this;
+    }
 
     public function getCreatedAt(): ?\DateTimeImmutable
     {
@@ -221,32 +235,9 @@ class Document
         return $this->updatedAt;
     }
 
-    public function setUpdatedAt(): static
-    {
-        $this->updatedAt = new \DateTimeImmutable();
-        return $this;
-    }
-
     #[ORM\PreUpdate]
     public function updateTimestamps(): void
     {
         $this->updatedAt = new \DateTimeImmutable();
-    }
-
-    #[ORM\PrePersist]
-    public function setInitialScore(): void
-    {
-        if ($this->score === 0) {
-            $this->calculateInitialScore();
-        }
-    }
-
-    private function calculateInitialScore(): void
-    {
-        $baseScore = $this->type === 'video' ? 
-            ($this->views / 1000) + ($this->likes / 100) :
-            ($this->readingTime ?? 0) + ($this->reactions ?? 0) / 50;
-            
-        $this->score = $baseScore * ($this->type === 'video' ? 1.5 : 1.0);
     }
 }

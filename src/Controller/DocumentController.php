@@ -14,7 +14,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use OpenApi\Attributes as OA;
 
-#[Route('/documents', name: 'documents_')]
+#[Route('/api/documents', name: 'documents_')]
 #[OA\Tag(name: 'Documents')]
 class DocumentController extends AbstractController
 {
@@ -27,17 +27,17 @@ class DocumentController extends AbstractController
 
     #[Route('', name: 'index', methods: ['GET'])]
     #[OA\Get(
-        path: '/api/documents',
-        summary: 'Get all documents',
+        path: '/',
+        summary: 'Tüm dokümanları getir',
         parameters: [
-            new OA\Parameter(name: 'page', in: 'query', description: 'Page number', schema: new OA\Schema(type: 'integer', default: 1)),
-            new OA\Parameter(name: 'limit', in: 'query', description: 'Results per page', schema: new OA\Schema(type: 'integer', default: 20)),
-            new OA\Parameter(name: 'category', in: 'query', description: 'Filter by category', schema: new OA\Schema(type: 'string'))
+            new OA\Parameter(name: 'page', in: 'query', description: 'Sayfa numarası', schema: new OA\Schema(type: 'integer', default: 1)),
+            new OA\Parameter(name: 'limit', in: 'query', description: 'Sayfa başına sonuç', schema: new OA\Schema(type: 'integer', default: 20)),
+            new OA\Parameter(name: 'category', in: 'query', description: 'Kategoriye göre filtrele', schema: new OA\Schema(type: 'string'))
         ],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'List of documents',
+                description: 'Doküman listesi',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Document')),
@@ -62,7 +62,7 @@ class DocumentController extends AbstractController
             $totalCount = $this->documentRepository->count([]);
         }
 
-        $data = $this->serializer->serialize($documents, 'json', ['groups' => ['document:read']]);
+        $data = $this->serializer->normalize($documents, null, ['groups' => ['document:read']]);
 
         $meta = [
             'total' => $totalCount,
@@ -71,26 +71,26 @@ class DocumentController extends AbstractController
             'pages' => ceil($totalCount / $limit)
         ];
 
-        return new JsonResponse([
-            'data' => json_decode($data),
+        return $this->json([
+            'data' => $data,
             'meta' => $meta
         ]);
     }
 
     #[Route('/{id}', name: 'show', methods: ['GET'], requirements: ['id' => '\d+'])]
     #[OA\Get(
-        path: '/api/documents/{id}',
-        summary: 'Get a specific document',
+        path: '/{id}',
+        summary: 'Belirli bir dokümanı getir',
         parameters: [
-            new OA\Parameter(name: 'id', in: 'path', description: 'Document ID', schema: new OA\Schema(type: 'integer'))
+            new OA\Parameter(name: 'id', in: 'path', description: 'Doküman ID', schema: new OA\Schema(type: 'integer'))
         ],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'Document details',
+                description: 'Doküman detayları',
                 content: new OA\JsonContent(ref: '#/components/schemas/Document')
             ),
-            new OA\Response(response: 404, description: 'Document not found')
+            new OA\Response(response: 404, description: 'Doküman bulunamadı')
         ]
     )]
     public function show(int $id): JsonResponse
@@ -98,18 +98,18 @@ class DocumentController extends AbstractController
         $document = $this->documentRepository->find($id);
 
         if (!$document) {
-            return new JsonResponse(['error' => 'Document not found'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Doküman bulunamadı'], Response::HTTP_NOT_FOUND);
         }
 
-        $data = $this->serializer->serialize($document, 'json', ['groups' => ['document:read']]);
+        $data = $this->serializer->normalize($document, null, ['groups' => ['document:read']]);
 
-        return new JsonResponse(json_decode($data));
+        return $this->json($data);
     }
 
     #[Route('', name: 'create', methods: ['POST'])]
     #[OA\Post(
-        path: '/api/documents',
-        summary: 'Create a new document',
+        path: '/',
+        summary: 'Yeni doküman oluştur',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -126,21 +126,14 @@ class DocumentController extends AbstractController
         responses: [
             new OA\Response(
                 response: 201,
-                description: 'Document created',
+                description: 'Doküman oluşturuldu',
                 content: new OA\JsonContent(ref: '#/components/schemas/Document')
             ),
-            new OA\Response(response: 400, description: 'Validation error')
+            new OA\Response(response: 400, description: 'Doğrulama hatası')
         ]
     )]
     public function create(Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-
-        if (!$data) {
-            return new JsonResponse(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $document = new Document();
         $document = $this->serializer->deserialize(
             $request->getContent(),
             Document::class,
@@ -155,23 +148,23 @@ class DocumentController extends AbstractController
             foreach ($errors as $error) {
                 $errorMessages[$error->getPropertyPath()] = $error->getMessage();
             }
-            return new JsonResponse(['errors' => $errorMessages], Response::HTTP_BAD_REQUEST);
+            return $this->json(['errors' => $errorMessages], Response::HTTP_BAD_REQUEST);
         }
 
         $this->entityManager->persist($document);
         $this->entityManager->flush();
 
-        $responseData = $this->serializer->serialize($document, 'json', ['groups' => ['document:read']]);
+        $responseData = $this->serializer->normalize($document, null, ['groups' => ['document:read']]);
 
-        return new JsonResponse(json_decode($responseData), Response::HTTP_CREATED);
+        return $this->json($responseData, Response::HTTP_CREATED);
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT'], requirements: ['id' => '\d+'])]
     #[OA\Put(
-        path: '/api/documents/{id}',
-        summary: 'Update a document',
+        path: '/{id}', // Relatif yol
+        summary: 'Bir dokümanı güncelle',
         parameters: [
-            new OA\Parameter(name: 'id', in: 'path', description: 'Document ID', schema: new OA\Schema(type: 'integer'))
+            new OA\Parameter(name: 'id', in: 'path', description: 'Doküman ID', schema: new OA\Schema(type: 'integer'))
         ],
         requestBody: new OA\RequestBody(
             required: true,
@@ -188,11 +181,11 @@ class DocumentController extends AbstractController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'Document updated',
+                description: 'Doküman güncellendi',
                 content: new OA\JsonContent(ref: '#/components/schemas/Document')
             ),
-            new OA\Response(response: 404, description: 'Document not found'),
-            new OA\Response(response: 400, description: 'Validation error')
+            new OA\Response(response: 404, description: 'Doküman bulunamadı'),
+            new OA\Response(response: 400, description: 'Doğrulama hatası')
         ]
     )]
     public function update(Request $request, int $id): JsonResponse
@@ -200,33 +193,18 @@ class DocumentController extends AbstractController
         $document = $this->documentRepository->find($id);
 
         if (!$document) {
-            return new JsonResponse(['error' => 'Document not found'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Doküman bulunamadı'], Response::HTTP_NOT_FOUND);
         }
 
-        $data = json_decode($request->getContent(), true);
-
-        if (!$data) {
-            return new JsonResponse(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
-        }
-
-        // Update fields
-        if (isset($data['title'])) {
-            $document->setTitle($data['title']);
-        }
-        if (isset($data['content'])) {
-            $document->setContent($data['content']);
-        }
-        if (isset($data['url'])) {
-            $document->setUrl($data['url']);
-        }
-        if (isset($data['category'])) {
-            $document->setCategory($data['category']);
-        }
-        if (isset($data['tags'])) {
-            $document->setTags($data['tags']);
-        }
-
-        $document->setUpdatedAt();
+        $this->serializer->deserialize(
+            $request->getContent(),
+            Document::class,
+            'json',
+            [
+                'object_to_populate' => $document, // Mevcut nesneyi doldur
+                'groups' => ['document:write']
+            ]
+        );
 
         $errors = $this->validator->validate($document);
 
@@ -235,26 +213,26 @@ class DocumentController extends AbstractController
             foreach ($errors as $error) {
                 $errorMessages[$error->getPropertyPath()] = $error->getMessage();
             }
-            return new JsonResponse(['errors' => $errorMessages], Response::HTTP_BAD_REQUEST);
+            return $this->json(['errors' => $errorMessages], Response::HTTP_BAD_REQUEST);
         }
 
         $this->entityManager->flush();
 
-        $responseData = $this->serializer->serialize($document, 'json', ['groups' => ['document:read']]);
+        $responseData = $this->serializer->normalize($document, null, ['groups' => ['document:read']]);
 
-        return new JsonResponse(json_decode($responseData));
+        return $this->json($responseData);
     }
 
     #[Route('/{id}', name: 'delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     #[OA\Delete(
-        path: '/api/documents/{id}',
-        summary: 'Delete a document',
+        path: '/{id}',
+        summary: 'Bir dokümanı sil',
         parameters: [
-            new OA\Parameter(name: 'id', in: 'path', description: 'Document ID', schema: new OA\Schema(type: 'integer'))
+            new OA\Parameter(name: 'id', in: 'path', description: 'Doküman ID', schema: new OA\Schema(type: 'integer'))
         ],
         responses: [
-            new OA\Response(response: 204, description: 'Document deleted'),
-            new OA\Response(response: 404, description: 'Document not found')
+            new OA\Response(response: 204, description: 'Doküman silindi'),
+            new OA\Response(response: 404, description: 'Doküman bulunamadı')
         ]
     )]
     public function delete(int $id): JsonResponse
@@ -262,28 +240,28 @@ class DocumentController extends AbstractController
         $document = $this->documentRepository->find($id);
 
         if (!$document) {
-            return new JsonResponse(['error' => 'Document not found'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Doküman bulunamadı'], Response::HTTP_NOT_FOUND);
         }
 
         $this->entityManager->remove($document);
         $this->entityManager->flush();
 
-        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+        return $this->json(null, Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/category/{category}', name: 'by_category', methods: ['GET'])]
     #[OA\Get(
-        path: '/api/documents/category/{category}',
-        summary: 'Get documents by category',
+        path: '/category/{category}',
+        summary: 'Kategoriye göre dokümanları getir',
         parameters: [
-            new OA\Parameter(name: 'category', in: 'path', description: 'Category name', schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'page', in: 'query', description: 'Page number', schema: new OA\Schema(type: 'integer', default: 1)),
-            new OA\Parameter(name: 'limit', in: 'query', description: 'Results per page', schema: new OA\Schema(type: 'integer', default: 20))
+            new OA\Parameter(name: 'category', in: 'path', description: 'Kategori adı', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'page', in: 'query', description: 'Sayfa numarası', schema: new OA\Schema(type: 'integer', default: 1)),
+            new OA\Parameter(name: 'limit', in: 'query', description: 'Sayfa başına sonuç', schema: new OA\Schema(type: 'integer', default: 20))
         ],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'Documents in category',
+                description: 'Kategorideki dokümanlar',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Document')),
@@ -302,7 +280,7 @@ class DocumentController extends AbstractController
         $documents = $this->documentRepository->findByCategory($category, $limit, $offset);
         $totalCount = $this->documentRepository->count(['category' => $category]);
 
-        $data = $this->serializer->serialize($documents, 'json', ['groups' => ['document:read']]);
+        $data = $this->serializer->normalize($documents, null, ['groups' => ['document:read']]);
 
         $meta = [
             'total' => $totalCount,
@@ -312,12 +290,9 @@ class DocumentController extends AbstractController
             'category' => $category
         ];
 
-        return new JsonResponse([
-            'data' => json_decode($data),
+        return $this->json([
+            'data' => $data,
             'meta' => $meta
         ]);
     }
-
-
-
 }

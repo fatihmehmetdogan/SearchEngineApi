@@ -7,9 +7,11 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use OpenApi\Attributes as OA;
 
+#[Route('/api', name: 'api_')]
+#[OA\Tag(name: 'Info')]
 class ApiController extends AbstractController
 {
-    #[Route('/', name: 'api_info', methods: ['GET'])]
+    #[Route('/', name: 'info', methods: ['GET'])]
     #[OA\Get(
         path: '/api/',
         summary: 'API Bilgileri',

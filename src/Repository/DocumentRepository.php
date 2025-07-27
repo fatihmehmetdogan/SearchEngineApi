@@ -15,51 +15,87 @@ class DocumentRepository extends ServiceEntityRepository
     }
 
     /**
-     * Search documents using full-text search and filters
+     * Search documents using standard LIKE operator and filters.
      */
     public function search(string $query, array $filters = [], int $limit = 20, int $offset = 0): array
     {
         $qb = $this->createQueryBuilder('d');
 
-        // Full-text search
         if (!empty($query)) {
-            $qb->andWhere('MATCH(d.title, d.content) AGAINST (:query IN BOOLEAN MODE) > 0')
-               ->setParameter('query', $this->prepareSearchQuery($query));
+            $qb->andWhere('d.title LIKE :query OR d.content LIKE :query')
+                ->setParameter('query', '%' . $query . '%'); // Kelimenin her yerinde geçebilir
         }
 
-        // Apply filters
+        // Filtreleri uygula
         $this->applyFilters($qb, $filters);
 
-        // Order by relevance if search query exists, otherwise by creation date
-        if (!empty($query)) {
-            $qb->addSelect('MATCH(d.title, d.content) AGAINST (:query IN BOOLEAN MODE) as HIDDEN relevance')
-               ->orderBy('relevance', 'DESC');
-        } else {
-            $qb->orderBy('d.createdAt', 'DESC');
-        }
+        // Sıralama
+        $sortBy = $filters['sort'] ?? 'finalScore'; // SearchController'dan gelen 'sort' parametresini al
+        $sortOrder = $filters['order'] ?? 'DESC'; // 'order' parametresini de al
+
+        // Geçerli sıralama alanlarını kontrol et
+        $allowedSortFields = ['finalScore', 'createdAt', 'title', 'type'];
+        $sortBy = in_array($sortBy, $allowedSortFields) ? $sortBy : 'finalScore';
+        $sortOrder = strtolower($sortOrder) === 'asc' ? 'ASC' : 'DESC';
+
+        $qb->orderBy('d.' . $sortBy, $sortOrder);
 
         return $qb->setMaxResults($limit)
-                  ->setFirstResult($offset)
-                  ->getQuery()
-                  ->getResult();
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
     }
 
     /**
-     * Count search results
+     * Count search results using standard LIKE operator.
      */
     public function countSearch(string $query, array $filters = []): int
     {
         $qb = $this->createQueryBuilder('d')
-                   ->select('COUNT(d.id)');
+            ->select('COUNT(d.id)');
 
         if (!empty($query)) {
-            $qb->andWhere('MATCH(d.title, d.content) AGAINST (:query IN BOOLEAN MODE) > 0')
-               ->setParameter('query', $this->prepareSearchQuery($query));
+            $qb->andWhere('d.title LIKE :query OR d.content LIKE :query')
+                ->setParameter('query', '%' . $query . '%');
         }
 
         $this->applyFilters($qb, $filters);
 
         return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * Apply filters to query builder
+     */
+    private function applyFilters(QueryBuilder $qb, array $filters): void
+    {
+        if (isset($filters['type']) && !empty($filters['type']) && in_array($filters['type'], ['video', 'text'])) {
+            $qb->andWhere('d.type = :type')
+                ->setParameter('type', $filters['type']);
+        }
+        if (isset($filters['category']) && !empty($filters['category'])) {
+            $qb->andWhere('d.category = :category')
+                ->setParameter('category', $filters['category']);
+        }
+
+        if (isset($filters['tags']) && !empty($filters['tags'])) {
+            $tags = is_array($filters['tags']) ? $filters['tags'] : [$filters['tags']];
+            foreach ($tags as $index => $tag) {
+                // JSON_CONTAINS kullanılıyor, bu MySQL'in JSON tipleri için uygun
+                $qb->andWhere("JSON_CONTAINS(d.tags, :tag{$index}) = 1")
+                    ->setParameter("tag{$index}", json_encode($tag));
+            }
+        }
+
+        if (isset($filters['date_from']) && !empty($filters['date_from'])) {
+            $qb->andWhere('d.publishedAt >= :dateFrom')
+                ->setParameter('dateFrom', new \DateTimeImmutable($filters['date_from']));
+        }
+
+        if (isset($filters['date_to']) && !empty($filters['date_to'])) {
+            $qb->andWhere('d.publishedAt <= :dateTo')
+                ->setParameter('dateTo', new \DateTimeImmutable($filters['date_to']));
+        }
     }
 
     /**
@@ -68,13 +104,13 @@ class DocumentRepository extends ServiceEntityRepository
     public function findByCategory(string $category, int $limit = 20, int $offset = 0): array
     {
         return $this->createQueryBuilder('d')
-                    ->andWhere('d.category = :category')
-                    ->setParameter('category', $category)
-                    ->orderBy('d.createdAt', 'DESC')
-                    ->setMaxResults($limit)
-                    ->setFirstResult($offset)
-                    ->getQuery()
-                    ->getResult();
+            ->andWhere('d.category = :category')
+            ->setParameter('category', $category)
+            ->orderBy('d.finalScore', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
     }
 
     /**
@@ -83,17 +119,17 @@ class DocumentRepository extends ServiceEntityRepository
     public function findByTags(array $tags, int $limit = 20, int $offset = 0): array
     {
         $qb = $this->createQueryBuilder('d');
-        
+
         foreach ($tags as $index => $tag) {
             $qb->andWhere("JSON_CONTAINS(d.tags, :tag{$index}) = 1")
-               ->setParameter("tag{$index}", json_encode($tag));
+                ->setParameter("tag{$index}", json_encode($tag));
         }
 
-        return $qb->orderBy('d.createdAt', 'DESC')
-                  ->setMaxResults($limit)
-                  ->setFirstResult($offset)
-                  ->getQuery()
-                  ->getResult();
+        return $qb->orderBy('d.finalScore', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
     }
 
     /**
@@ -102,13 +138,13 @@ class DocumentRepository extends ServiceEntityRepository
     public function getPopularCategories(int $limit = 10): array
     {
         return $this->createQueryBuilder('d')
-                    ->select('d.category, COUNT(d.id) as doc_count')
-                    ->andWhere('d.category IS NOT NULL')
-                    ->groupBy('d.category')
-                    ->orderBy('doc_count', 'DESC')
-                    ->setMaxResults($limit)
-                    ->getQuery()
-                    ->getResult();
+            ->select('d.category, COUNT(d.id) as doc_count')
+            ->andWhere('d.category IS NOT NULL')
+            ->groupBy('d.category')
+            ->orderBy('doc_count', 'DESC')
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getResult();
     }
 
     /**
@@ -117,105 +153,18 @@ class DocumentRepository extends ServiceEntityRepository
     public function getAllTags(): array
     {
         $documents = $this->createQueryBuilder('d')
-                          ->select('d.tags')
-                          ->andWhere('d.tags IS NOT NULL')
-                          ->getQuery()
-                          ->getResult();
+            ->select('d.tags')
+            ->andWhere('d.tags IS NOT NULL')
+            ->getQuery()
+            ->getResult();
 
         $allTags = [];
         foreach ($documents as $doc) {
-            $allTags = array_merge($allTags, $doc['tags']);
-        }
-
-        return array_unique($allTags);
-    }
-
-    /**
-     * Apply filters to query builder
-     */
-    private function applyFilters(QueryBuilder $qb, array $filters): void
-    {
-        if (isset($filters['category']) && !empty($filters['category'])) {
-            $qb->andWhere('d.category = :category')
-               ->setParameter('category', $filters['category']);
-        }
-
-        if (isset($filters['tags']) && !empty($filters['tags'])) {
-            $tags = is_array($filters['tags']) ? $filters['tags'] : [$filters['tags']];
-            foreach ($tags as $index => $tag) {
-                $qb->andWhere("JSON_CONTAINS(d.tags, :tag{$index}) = 1")
-                   ->setParameter("tag{$index}", json_encode($tag));
+            if (isset($doc['tags']) && is_array($doc['tags'])) {
+                $allTags = array_merge($allTags, $doc['tags']);
             }
         }
 
-        if (isset($filters['date_from']) && !empty($filters['date_from'])) {
-            $qb->andWhere('d.createdAt >= :dateFrom')
-               ->setParameter('dateFrom', new \DateTime($filters['date_from']));
-        }
-
-        if (isset($filters['date_to']) && !empty($filters['date_to'])) {
-            $qb->andWhere('d.createdAt <= :dateTo')
-               ->setParameter('dateTo', new \DateTime($filters['date_to']));
-        }
-    }
-
-    /**
-     * Prepare search query for full-text search
-     */
-    private function prepareSearchQuery(string $query): string
-    {
-        // Remove special characters and prepare for boolean mode
-        $query = preg_replace('/[^\w\s]/', '', $query);
-        $words = explode(' ', trim($query));
-        $words = array_filter($words, fn($word) => strlen($word) > 2);
-        
-        return '+' . implode(' +', $words);
-    }
-
-    /**
-     * Find documents for dashboard with sorting and filtering
-     */
-    public function findForDashboard(
-        int $page = 1,
-        string $sort = 'score',
-        string $order = 'desc',
-        ?string $type = null,
-        int $limit = 10
-    ): array {
-        $qb = $this->createQueryBuilder('d');
-
-        if ($type) {
-            $qb->andWhere('d.type = :type')
-               ->setParameter('type', $type);
-        }
-
-        // Validate sort field to prevent SQL injection
-        $allowedSortFields = ['title', 'score', 'createdAt', 'type'];
-        $sort = in_array($sort, $allowedSortFields) ? $sort : 'score';
-        
-        // Validate order
-        $order = strtolower($order) === 'asc' ? 'ASC' : 'DESC';
-
-        $qb->orderBy('d.' . $sort, $order)
-           ->setFirstResult(($page - 1) * $limit)
-           ->setMaxResults($limit);
-
-        return $qb->getQuery()->getResult();
-    }
-
-    /**
-     * Count total documents for pagination
-     */
-    public function countForDashboard(?string $type = null): int
-    {
-        $qb = $this->createQueryBuilder('d')
-                   ->select('COUNT(d.id)');
-
-        if ($type) {
-            $qb->andWhere('d.type = :type')
-               ->setParameter('type', $type);
-        }
-
-        return (int) $qb->getQuery()->getSingleScalarResult();
+        return array_unique($allTags);
     }
 }

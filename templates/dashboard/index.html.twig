@@ -1,103 +1,238 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Search Engine Dashboard{% endblock %}
+{% block title %}Arama Motoru Dashboard{% endblock %}
 
 {% block body %}
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col">
-            <h1>Content Dashboard</h1>
-        </div>
-        <div class="col text-end">
-            <div class="btn-group">
-                <a href="{{ path('dashboard_index', {type: 'video'}) }}" 
-                   class="btn btn-outline-primary {% if currentType == 'video' %}active{% endif %}">
-                    <i class="bi bi-play-circle"></i> Videos
-                </a>
-                <a href="{{ path('dashboard_index', {type: 'text'}) }}" 
-                   class="btn btn-outline-primary {% if currentType == 'text' %}active{% endif %}">
-                    <i class="bi bi-file-text"></i> Text
-                </a>
-                <a href="{{ path('dashboard_index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-grid"></i> All
-                </a>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <h1 class="mb-4">Arama Motoru Dashboard</h1>
+
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form id="searchForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control" id="searchQuery" placeholder="Arama terimi girin...">
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-control" id="contentType">
+                                        <option value="">Tüm Türler</option>
+                                        <option value="video">Video</option>
+                                        <option value="text">Metin</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="submit" class="btn btn-primary btn-block">Ara</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Arama Sonuçları</h5>
+                        <div>
+                            <select id="sortBy" class="form-control form-control-sm">
+                                <option value="finalScore">Skor (Yüksek → Düşük)</option> {# 'score' yerine 'finalScore' #}
+                                <option value="createdAt">Tarih (Yeni → Eski)</option> {# 'created_at' yerine 'createdAt' #}
+                                <option value="title">Başlık (A → Z)</option>
+                            </select>
+                            <select id="sortOrder" class="form-control form-control-sm ms-2"> {# Yeni: Sıralama yönü #}
+                                <option value="desc">Azalan</option>
+                                <option value="asc">Artan</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="loading" class="text-center" style="display: none;">
+                            <div class="spinner-border" role="status">
+                                <span class="sr-only">Yükleniyor...</span>
+                            </div>
+                        </div>
+
+                        <div id="results">
+                            <p class="text-muted">Arama yapmak için yukarıdaki formu kullanın.</p>
+                        </div>
+
+                        <nav id="pagination" style="display: none;">
+                            <ul class="pagination justify-content-center">
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>
-                                <a href="{{ path('dashboard_index', {
-                                    sort: 'title',
-                                    order: currentSort == 'title' and currentOrder == 'asc' ? 'desc' : 'asc',
-                                    type: currentType,
-                                    page: currentPage
-                                }) }}" class="text-decoration-none text-dark">
-                                    Title
-                                    {% if currentSort == 'title' %}
-                                        <i class="bi bi-arrow-{{ currentOrder == 'asc' ? 'up' : 'down' }}"></i>
-                                    {% endif %}
-                                </a>
-                            </th>
-                            <th>Type</th>
-                            <th>
-                                <a href="{{ path('dashboard_index', {
-                                    sort: 'score',
-                                    order: currentSort == 'score' and currentOrder == 'asc' ? 'desc' : 'asc',
-                                    type: currentType,
-                                    page: currentPage
-                                }) }}" class="text-decoration-none text-dark">
-                                    Score
-                                    {% if currentSort == 'score' %}
-                                        <i class="bi bi-arrow-{{ currentOrder == 'asc' ? 'up' : 'down' }}"></i>
-                                    {% endif %}
-                                </a>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for doc in documents %}
-                            <tr>
-                                <td>{{ doc.title }}</td>
-                                <td>
-                                    <span class="badge bg-{{ doc.type == 'video' ? 'danger' : 'info' }}">
-                                        <i class="bi bi-{{ doc.type == 'video' ? 'play-circle' : 'file-text' }}"></i>
-                                        {{ doc.type }}
-                                    </span>
-                                </td>
-                                <td>{{ doc.score|number_format(2) }}</td>
-                            </tr>
-                        {% else %}
-                            <tr>
-                                <td colspan="3" class="text-center">No documents found</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchForm = document.getElementById('searchForm');
+            const loadingDiv = document.getElementById('loading');
+            const resultsDiv = document.getElementById('results');
+            const sortSelect = document.getElementById('sortBy');
+            const sortOrderSelect = document.getElementById('sortOrder'); // Yeni eklenen sıralama yönü select'i
 
-            {% if totalPages > 1 %}
-                <nav aria-label="Page navigation" class="mt-4">
-                    <ul class="pagination justify-content-center">
-                        {% for i in 1..totalPages %}
-                            <li class="page-item {% if i == currentPage %}active{% endif %}">
-                                <a class="page-link" href="{{ path('dashboard_index', {
-                                    page: i,
-                                    sort: currentSort,
-                                    order: currentOrder,
-                                    type: currentType
-                                }) }}">{{ i }}</a>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </nav>
-            {% endif %}
-        </div>
-    </div>
-</div>
+            let currentQuery = '';
+            let currentPage = 1;
+            let currentType = ''; // 'contentType' yerine 'currentType'
+            let currentSortBy = 'finalScore'; // Varsayılan sıralama alanı
+            let currentSortOrder = 'desc'; // Varsayılan sıralama yönü
+
+            // Sayfa yüklendiğinde veya sıralama değiştiğinde tetiklenecek olaylar
+            searchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                currentQuery = document.getElementById('searchQuery').value;
+                currentType = document.getElementById('contentType').value;
+                currentPage = 1; // Yeni arama yapıldığında sayfayı sıfırla
+                performSearch();
+            });
+
+            sortSelect.addEventListener('change', function() {
+                currentSortBy = sortSelect.value;
+                performSearch();
+            });
+
+            sortOrderSelect.addEventListener('change', function() { // Yeni: Sıralama yönü değiştiğinde
+                currentSortOrder = sortOrderSelect.value;
+                performSearch();
+            });
+
+            // İlk yüklemede tüm sonuçları göstermek için
+            performSearch();
+
+
+            function performSearch() {
+                loadingDiv.style.display = 'block';
+                resultsDiv.innerHTML = ''; // Önceki sonuçları temizle
+
+                const params = new URLSearchParams({
+                    q: currentQuery,
+                    page: currentPage,
+                    limit: 10,
+                    sort: currentSortBy, // 'sortSelect.value' yerine 'currentSortBy'
+                    order: currentSortOrder // Yeni: 'order' parametresini ekle
+                });
+
+                if (currentType) {
+                    params.append('type', currentType); // 'content_type' yerine 'type'
+                }
+
+                fetch(`/api/search?${params}`)
+                    .then(response => {
+                        if (!response.ok) { // HTTP hatası varsa yakala
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        loadingDiv.style.display = 'none';
+                        displayResults(data);
+                        // Pagination logic here (if you implement it)
+                    })
+                    .catch(error => {
+                        loadingDiv.style.display = 'none';
+                        resultsDiv.innerHTML = `<div class="alert alert-danger">Arama sırasında bir hata oluştu: ${error.message}</div>`;
+                        console.error('Search error:', error);
+                    });
+            }
+
+            function displayResults(data) {
+                if (!data.data || data.data.length === 0) {
+                    resultsDiv.innerHTML = '<div class="alert alert-info">Sonuç bulunamadı.</div>';
+                    return;
+                }
+
+                let html = '<div class="row">';
+
+                data.data.forEach(item => {
+                    const typeIcon = item.type === 'video' ? '🎥' : '📄';
+                    const typeBadge = item.type === 'video' ? 'bg-primary' : 'bg-secondary'; // Bootstrap 5 için 'bg-' sınıfı
+
+                    // Tarih formatlama (isteğe bağlı, daha iyi görünüm için)
+                    const formattedDate = item.publishedAt ? new Date(item.publishedAt.date || item.publishedAt).toLocaleDateString('tr-TR') : 'Bilinmiyor';
+
+                    html += `
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="card-title">${typeIcon} ${item.title || 'Başlık Yok'}</h6>
+                                        <div>
+                                            <span class="badge ${typeBadge}">${item.type || 'Bilinmiyor'}</span>
+                                            <span class="badge bg-success ms-1">Skor: ${parseFloat(item.finalScore).toFixed(2)}</span> {# 'item.score' yerine 'item.finalScore' #}
+                                        </div>
+                                    </div>
+                                    <p class="card-text text-muted small">${(item.content || '').substring(0, 100)}...</p> {# Null kontrolü eklendi #}
+                                    <p class="card-text small">Yayınlanma Tarihi: ${formattedDate}</p> {# Tarih eklendi #}
+                                    <div class="row text-center mt-2">
+                                        ${item.type === 'video' ? `
+                                            <div class="col-6"><small><strong>${item.views || 0}</strong><br>Görüntülenme</small></div>
+                                            <div class="col-6"><small><strong>${item.likes || 0}</strong><br>Beğeni</small></div>
+                                        ` : `
+                                            <div class="col-6"><small><strong>${item.readingTime || 0}</strong><br>Okuma Süresi</small></div> {# 'reading_time' yerine 'readingTime' #}
+                                            <div class="col-6"><small><strong>${item.reactions || 0}</strong><br>Reaksiyon</small></div>
+                                        `}
+                                    </div>
+                                    ${item.url ? `<a href="${item.url}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">Görüntüle</a>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+            }
+
+            // Sayfalama fonksiyonu (örnek, tam implementasyon için daha fazla kod gerekir)
+            function setupPagination(meta) {
+                const paginationNav = document.getElementById('pagination');
+                const paginationUl = paginationNav.querySelector('ul');
+                paginationUl.innerHTML = '';
+
+                if (meta.pages <= 1) {
+                    paginationNav.style.display = 'none';
+                    return;
+                }
+                paginationNav.style.display = 'block';
+
+                // Önceki sayfa butonu
+                paginationUl.innerHTML += `
+                    <li class="page-item ${meta.page === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" data-page="${meta.page - 1}">Önceki</a>
+                    </li>
+                `;
+
+                // Sayfa numaraları
+                for (let i = 1; i <= meta.pages; i++) {
+                    paginationUl.innerHTML += `
+                        <li class="page-item ${meta.page === i ? 'active' : ''}">
+                            <a class="page-link" href="#" data-page="${i}">${i}</a>
+                        </li>
+                    `;
+                }
+
+                // Sonraki sayfa butonu
+                paginationUl.innerHTML += `
+                    <li class="page-item ${meta.page === meta.pages ? 'disabled' : ''}">
+                        <a class="page-link" href="#" data-page="${meta.page + 1}">Sonraki</a>
+                    </li>
+                `;
+
+                // Sayfa butonlarına tıklama olayları
+                paginationUl.querySelectorAll('.page-link').forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const page = parseInt(this.dataset.page);
+                        if (page > 0 && page <= meta.pages) {
+                            currentPage = page;
+                            performSearch();
+                        }
+                    });
+                });
+            }
+        });
+    </script>
 {% endblock %}
