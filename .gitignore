@@ -59,3 +59,7 @@ mysql_data/
 /phpunit.xml
 /.phpunit.cache/
 ###< phpunit/phpunit ###
+
+# Environment files
+.env
+.env.*
