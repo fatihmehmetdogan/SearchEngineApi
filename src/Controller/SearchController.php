@@ -35,13 +35,13 @@ class SearchController extends AbstractController
         summary: 'Doküman arama',
         parameters: [
             new OA\Parameter(name: 'q', in: 'query', description: 'Arama sorgusu', schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'type', in: 'query', description: 'İçerik türüne göre filtrele (video/text)', schema: new OA\Schema(type: 'string', enum: ['video', 'text'])), // 'type' olarak düzeltildi
+            new OA\Parameter(name: 'type', in: 'query', description: 'İçerik türüne göre filtrele (video/text)', schema: new OA\Schema(type: 'string', enum: ['video', 'text'])),
             new OA\Parameter(name: 'category', in: 'query', description: 'Kategoriye göre filtrele', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'tags', in: 'query', description: 'Etiketlere göre filtrele (virgülle ayrılmış)', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'page', in: 'query', description: 'Sayfa numarası', schema: new OA\Schema(type: 'integer', default: 1)),
             new OA\Parameter(name: 'limit', in: 'query', description: 'Sayfa başına sonuç sayısı', schema: new OA\Schema(type: 'integer', default: 20)),
-            new OA\Parameter(name: 'sort', in: 'query', description: 'Sıralama kriteri (finalScore, createdAt, title, type)', schema: new OA\Schema(type: 'string', default: 'finalScore', enum: ['finalScore', 'createdAt', 'title', 'type'])), // 'sort' parametresi eklendi ve enum ile kısıtlandı
-            new OA\Parameter(name: 'order', in: 'query', description: 'Sıralama yönü (asc/desc)', schema: new OA\Schema(type: 'string', default: 'desc', enum: ['asc', 'desc'])), // 'order' parametresi eklendi
+            new OA\Parameter(name: 'sort', in: 'query', description: 'Sıralama kriteri (finalScore, createdAt, title, type)', schema: new OA\Schema(type: 'string', default: 'finalScore', enum: ['finalScore', 'createdAt', 'title', 'type'])),
+            new OA\Parameter(name: 'order', in: 'query', description: 'Sıralama yönü (asc/desc)', schema: new OA\Schema(type: 'string', default: 'desc', enum: ['asc', 'desc'])),
             new OA\Parameter(name: 'date_from', in: 'query', description: 'Tarihten itibaren filtrele (YYYY-MM-DD)', schema: new OA\Schema(type: 'string', format: 'date')),
             new OA\Parameter(name: 'date_to', in: 'query', description: 'Tarihe kadar filtrele (YYYY-MM-DD)', schema: new OA\Schema(type: 'string', format: 'date'))
         ],
@@ -68,17 +68,17 @@ class SearchController extends AbstractController
         $limit = min(100, max(1, (int) $request->query->get('limit', 20)));
         $offset = ($page - 1) * $limit;
 
-        // Dashboard'dan gelen sort ve order parametrelerini al
+        // Dashboard'dan gelen sıralama parametrelerini al
         $sortBy = $request->query->get('sort', 'finalScore');
         $sortOrder = $request->query->get('order', 'desc');
 
-        // Hazırlanacak filtreler
+        // Filtreleri hazırla
         $filters = [
             'sort' => $sortBy,
             'order' => $sortOrder
         ];
 
-        // Filtreleri kontrol et ve ekle
+        // Filtreleri kontrol et ve uygunsa ekle
         if ($type = $request->query->get('type')) {
             if (!in_array($type, ['video', 'text'])) {
                 return $this->json(['error' => 'Geçersiz "type" filtresi. "video" veya "text" olmalı.'], Response::HTTP_BAD_REQUEST);
@@ -116,7 +116,7 @@ class SearchController extends AbstractController
 
         $executionTime = microtime(true) - $startTime;
 
-        // Arama sorgusunu loglanıyor
+        // Arama sorgusunu logla
         $this->logSearchQuery($request, $query, $filters, count($documents), $executionTime);
 
         $data = $this->serializer->normalize($documents, null, ['groups' => ['search:read']]);
@@ -140,7 +140,7 @@ class SearchController extends AbstractController
     #[Route('/suggestions', name: 'suggestions', methods: ['GET'])]
     #[OA\Get(
         path: '/suggestions',
-        summary: 'Arama önerileri al',
+        summary: 'Arama önerilerini al',
         parameters: [
             new OA\Parameter(name: 'q', in: 'query', description: 'Kısmi arama sorgusu', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'limit', in: 'query', description: 'Öneri sayısı', schema: new OA\Schema(type: 'integer', default: 10))
@@ -277,7 +277,7 @@ class SearchController extends AbstractController
     }
 
     /**
-     * Log search query for analytics
+     * Arama sorgusunu analiz için kaydeder.
      */
     private function logSearchQuery(Request $request, string $query, array $filters, int $resultsCount, float $executionTime): void
     {

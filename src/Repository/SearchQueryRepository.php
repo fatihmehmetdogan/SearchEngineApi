@@ -14,21 +14,26 @@ class SearchQueryRepository extends ServiceEntityRepository
     }
 
     /**
-     * Get most popular search queries
+     * En popüler arama sorgularını getirir.
+     *
+     * @param int $limit
+     * @return array
      */
     public function getPopularQueries(int $limit = 10): array
     {
         return $this->createQueryBuilder('sq')
-                    ->select('sq.queryText, COUNT(sq.id) as search_count, AVG(sq.resultsCount) as avg_results')
-                    ->groupBy('sq.queryText')
-                    ->orderBy('search_count', 'DESC')
-                    ->setMaxResults($limit)
-                    ->getQuery()
-                    ->getResult();
+            ->select('sq.queryText, COUNT(sq.id) as search_count, AVG(sq.resultsCount) as avg_results')
+            ->groupBy('sq.queryText')
+            ->orderBy('search_count', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
     }
 
     /**
-     * Get search statistics
+     * Arama istatistiklerini getirir.
+     *
+     * @return array Toplam arama sayısı, ortalama işlem süresi, ortalama sonuç sayısı ve belli dönemlerdeki arama sayıları
      */
     public function getSearchStatistics(): array
     {
@@ -51,7 +56,10 @@ class SearchQueryRepository extends ServiceEntityRepository
     }
 
     /**
-     * Get searches count for specific period
+     * Belirli bir dönemde yapılan arama sayısını döner.
+     *
+     * @param string $period 'today', 'this week' veya 'this month' olabilir
+     * @return int
      */
     private function getSearchesCount(string $period): int
     {
@@ -78,14 +86,17 @@ class SearchQueryRepository extends ServiceEntityRepository
     }
 
     /**
-     * Get recent searches
+     * Son yapılan arama sorgularını döner.
+     *
+     * @param int $limit Döndürülecek sonuç sayısı
+     * @return array
      */
     public function getRecentSearches(int $limit = 20): array
     {
         return $this->createQueryBuilder('sq')
-                    ->orderBy('sq.createdAt', 'DESC')
-                    ->setMaxResults($limit)
-                    ->getQuery()
-                    ->getResult();
+            ->orderBy('sq.createdAt', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
     }
 }

@@ -15,7 +15,14 @@ class DocumentRepository extends ServiceEntityRepository
     }
 
     /**
-     * Search documents using standard LIKE operator and filters.
+     * Belirtilen sorgu ve filtrelerle dokümanlarda arama yapar.
+     * LIKE operatörü kullanılır.
+     *
+     * @param string $query
+     * @param array $filters
+     * @param int $limit
+     * @param int $offset
+     * @return array
      */
     public function search(string $query, array $filters = [], int $limit = 20, int $offset = 0): array
     {
@@ -23,15 +30,15 @@ class DocumentRepository extends ServiceEntityRepository
 
         if (!empty($query)) {
             $qb->andWhere('d.title LIKE :query OR d.content LIKE :query')
-                ->setParameter('query', '%' . $query . '%'); // Kelimenin her yerinde geçebilir
+                ->setParameter('query', '%' . $query . '%'); // Kelimenin herhangi bir yerinde geçebilir
         }
 
         // Filtreleri uygula
         $this->applyFilters($qb, $filters);
 
-        // Sıralama
-        $sortBy = $filters['sort'] ?? 'finalScore'; // SearchController'dan gelen 'sort' parametresini al
-        $sortOrder = $filters['order'] ?? 'DESC'; // 'order' parametresini de al
+        // Sıralama ayarları
+        $sortBy = $filters['sort'] ?? 'finalScore'; // Sıralama alanı
+        $sortOrder = $filters['order'] ?? 'DESC';  // Sıralama yönü
 
         // Geçerli sıralama alanlarını kontrol et
         $allowedSortFields = ['finalScore', 'createdAt', 'title', 'type'];
@@ -47,7 +54,11 @@ class DocumentRepository extends ServiceEntityRepository
     }
 
     /**
-     * Count search results using standard LIKE operator.
+     * Arama sonuçlarının toplam sayısını döner.
+     *
+     * @param string $query
+     * @param array $filters
+     * @return int
      */
     public function countSearch(string $query, array $filters = []): int
     {
@@ -65,7 +76,10 @@ class DocumentRepository extends ServiceEntityRepository
     }
 
     /**
-     * Apply filters to query builder
+     * QueryBuilder üzerinde filtreleri uygular.
+     *
+     * @param QueryBuilder $qb
+     * @param array $filters Uygulanacak filtreler (type, category, tags, date_from, date_to)
      */
     private function applyFilters(QueryBuilder $qb, array $filters): void
     {
@@ -81,7 +95,7 @@ class DocumentRepository extends ServiceEntityRepository
         if (isset($filters['tags']) && !empty($filters['tags'])) {
             $tags = is_array($filters['tags']) ? $filters['tags'] : [$filters['tags']];
             foreach ($tags as $index => $tag) {
-                // JSON_CONTAINS kullanılıyor, bu MySQL'in JSON tipleri için uygun
+                // MySQL JSON tipleri için JSON_CONTAINS fonksiyonu kullanılır
                 $qb->andWhere("JSON_CONTAINS(d.tags, :tag{$index}) = 1")
                     ->setParameter("tag{$index}", json_encode($tag));
             }
@@ -99,7 +113,12 @@ class DocumentRepository extends ServiceEntityRepository
     }
 
     /**
-     * Get documents by category
+     * Belirtilen kategoriye ait dokümanları getirir.
+     *
+     * @param string $category
+     * @param int $limit
+     * @param int $offset
+     * @return array
      */
     public function findByCategory(string $category, int $limit = 20, int $offset = 0): array
     {
@@ -114,7 +133,12 @@ class DocumentRepository extends ServiceEntityRepository
     }
 
     /**
-     * Get documents by tags
+     * Belirtilen etiketlere ait dokümanları getirir.
+     *
+     * @param array $tags
+     * @param int $limit
+     * @param int $offset Başlangıç kaydı (sayfalama için)
+     * @return array
      */
     public function findByTags(array $tags, int $limit = 20, int $offset = 0): array
     {
@@ -133,7 +157,10 @@ class DocumentRepository extends ServiceEntityRepository
     }
 
     /**
-     * Get popular categories
+     * En popüler kategorileri döner.
+     *
+     * @param int $limit Döndürülecek kategori sayısı
+     * @return array
      */
     public function getPopularCategories(int $limit = 10): array
     {
@@ -142,13 +169,15 @@ class DocumentRepository extends ServiceEntityRepository
             ->andWhere('d.category IS NOT NULL')
             ->groupBy('d.category')
             ->orderBy('doc_count', 'DESC')
-            ->setMaxResults(10)
+            ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
     }
 
     /**
-     * Get all unique tags
+     *  db deki etiketleri döner.
+     *
+     * @return array Etiketler dizisi
      */
     public function getAllTags(): array
     {
@@ -160,8 +189,10 @@ class DocumentRepository extends ServiceEntityRepository
 
         $allTags = [];
         foreach ($documents as $doc) {
-            if (isset($doc['tags']) && is_array($doc['tags'])) {
-                $allTags = array_merge($allTags, $doc['tags']);
+            if (!empty($doc['tags']) && is_array($doc['tags'])) {
+                // Sadece string tipindeki etiketleri al
+                $filteredTags = array_filter($doc['tags'], fn($tag) => is_string($tag));
+                $allTags = array_merge($allTags, $filteredTags);
             }
         }
 
