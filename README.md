@@ -89,6 +89,11 @@ Tüm kurulum adımları başarıyla tamamlandıktan sonra projenize aşağıdaki
 * **Arama Dashboard'u**: `http://localhost:8080/dashboard`
 * **PHPMyAdmin**: `http://localhost:8081` (MySQL veritabanınızı web arayüzünden yönetmek için)
 
+## Dashboard Ekran Görüntüsü
+
+Aşağıda, projenin temel yönetim ve arama dashboard’una ait bir örnek ekran görüntüsü bulunmaktadır:
+
+![Dashboard Ekranı](docs/dashboard.png)
 ---
 
 ## API Endpoints
