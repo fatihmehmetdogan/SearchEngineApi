@@ -5,7 +5,7 @@ namespace App\Controller;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/mock')]
 class MockXmlProviderController extends AbstractController
@@ -16,67 +16,57 @@ class MockXmlProviderController extends AbstractController
         $query = $request->query->get('q', '');
         $limit = $request->query->getInt('limit', 10);
 
-        $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><response></response>');
-        $xml->addChild('status', 'success');
-        $xml->addChild('query', htmlspecialchars($query));
-        $xml->addChild('provider', 'xml_mock');
+        // Mock XML data - XML formatına dikkat edin
+        $mockXmlData = <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<response>
+    <status>success</status>
+    <query>{$query}</query>
+    <provider>xml_mock</provider>
+    <items>
+        <item>
+            <id>4</id>
+            <title>Understanding Fundamentals</title>
+            <content>Deep dive into fundamentals and core concepts of modern programming.</content>
+            <type>text</type>
+            <views></views>
+            <likes></likes>
+            <reading_time>12</reading_time>
+            <reactions>89</reactions>
+            <category>Fundamentals</category>
+            <tags>
+                <tag>fundamentals</tag>
+                <tag>programming</tag>
+                <tag>theory</tag>
+            </tags>
+            <url>https://example.com/understanding-fundamentals</url>
+            <published_at>2024-01-10T08:00:00Z</published_at>
+        </item>
+        <item>
+            <id>5</id>
+            <title>Best Practices Video Guide</title>
+            <content>Learn industry best practices for development and software architecture.</content>
+            <type>video</type>
+            <views>95000</views>
+            <likes>3200</likes>
+            <reading_time></reading_time>
+            <reactions></reactions>
+            <category>Best Practices</category>
+            <tags>
+                <tag>best-practices</tag>
+                <tag>software</tag>
+                <tag>guide</tag>
+            </tags>
+            <url>https://example.com/best-practices-video</url>
+            <published_at>2024-01-30T16:45:00Z</published_at>
+        </item>
+    </items>
+    <total>2</total>
+</response>
+XML;
 
-        $items = $xml->addChild('items');
-
-        // Mock XML data
-        $mockData = [
-            [
-                'id' => 4,
-                'title' => "Understanding {$query} Fundamentals",
-                'content' => "Deep dive into {$query} fundamentals and core concepts...",
-                'type' => 'text',
-                'views' => null,
-                'likes' => null,
-                'reading_time' => 12,
-                'reactions' => 89,
-                'category' => 'Fundamentals',
-                'tags' => ['fundamentals', strtolower($query), 'theory'],
-                'url' => "https://example.com/{$query}-fundamentals",
-                'published_at' => '2024-01-10T08:00:00Z'
-            ],
-            [
-                'id' => 5,
-                'title' => "{$query} Best Practices Video",
-                'content' => "Learn industry best practices for {$query} development...",
-                'type' => 'video',
-                'views' => 95000,
-                'likes' => 3200,
-                'reading_time' => null,
-                'reactions' => null,
-                'category' => 'Best Practices',
-                'tags' => ['best-practices', strtolower($query), 'industry'],
-                'url' => "https://example.com/{$query}-best-practices",
-                'published_at' => '2024-01-30T16:45:00Z'
-            ]
-        ];
-
-        $filteredData = array_slice($mockData, 0, $limit);
-
-        foreach ($filteredData as $data) {
-            $item = $items->addChild('item');
-            foreach ($data as $key => $value) {
-                if ($key === 'tags') {
-                    $tagsElement = $item->addChild('tags');
-                    foreach ($value as $tag) {
-                        $tagsElement->addChild('tag', htmlspecialchars($tag));
-                    }
-                } else {
-                    $item->addChild($key, htmlspecialchars($value));
-                }
-            }
-        }
-
-        $xml->addChild('total', count($filteredData));
-
-        $response = new Response($xml->asXML());
+        $response = new Response($mockXmlData);
         $response->headers->set('Content-Type', 'application/xml');
-
         return $response;
     }
 }
-
