@@ -3,9 +3,16 @@
 namespace App\Service;
 
 use App\Entity\Document;
+use Psr\Log\LoggerInterface;
+
 
 class ScoringService
 {
+
+    public function __construct(private LoggerInterface $logger) {
+
+    }
+
     /**
      * Calculate final score based on content type and metrics of a Document entity.
      *
@@ -18,6 +25,22 @@ class ScoringService
         $typeMultiplier = $this->getTypeMultiplier($document->getType());
         $freshnessScore = $this->calculateFreshnessScore($document->getPublishedAt());
         $engagementScore = $this->calculateEngagementScore($document);
+
+        $finalScore = ($baseScore * $typeMultiplier) + $freshnessScore + $engagementScore;
+
+        $this->logger->debug("Scoring for Document: " . $document->getTitle(), [
+            'id' => $document->getId(),
+            'type' => $document->getType(),
+            'views' => $document->getViews(),
+            'likes' => $document->getLikes(),
+            'readingTime' => $document->getReadingTime(),
+            'reactions' => $document->getReactions(),
+            'baseScore' => $baseScore,
+            'typeMultiplier' => $typeMultiplier,
+            'freshnessScore' => $freshnessScore,
+            'engagementScore' => $engagementScore,
+            'finalScore' => $finalScore
+        ]);
 
         return ($baseScore * $typeMultiplier) + $freshnessScore + $engagementScore;
     }

@@ -8,6 +8,7 @@
             <div class="col-md-12">
                 <h1 class="mb-4">Arama Motoru Dashboard</h1>
 
+                {# Arama Formu #}
                 <div class="card mb-4">
                     <div class="card-body">
                         <form id="searchForm">
@@ -30,16 +31,17 @@
                     </div>
                 </div>
 
+                {# Sonuçlar #}
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Arama Sonuçları</h5>
                         <div>
                             <select id="sortBy" class="form-control form-control-sm">
-                                <option value="finalScore">Skor (Yüksek → Düşük)</option> {# 'score' yerine 'finalScore' #}
-                                <option value="createdAt">Tarih (Yeni → Eski)</option> {# 'created_at' yerine 'createdAt' #}
+                                <option value="finalScore">Skor (Yüksek → Düşük)</option>
+                                <option value="createdAt">Tarih (Yeni → Eski)</option>
                                 <option value="title">Başlık (A → Z)</option>
                             </select>
-                            <select id="sortOrder" class="form-control form-control-sm ms-2"> {# Yeni: Sıralama yönü #}
+                            <select id="sortOrder" class="form-control form-control-sm ms-2">
                                 <option value="desc">Azalan</option>
                                 <option value="asc">Artan</option>
                             </select>
@@ -66,26 +68,72 @@
         </div>
     </div>
 
+    {# Detay Modalı (Pop-up) #}
+    <div class="modal fade" id="documentDetailModal" tabindex="-1" aria-labelledby="documentDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="documentDetailModalLabel">Doküman Detayları</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h4 id="detailTitle"></h4>
+                    <p class="text-muted"><small>Kategori: <span id="detailCategory"></span> | Yayınlanma: <span id="detailPublishedAt"></span></small></p>
+                    <p id="detailContent"></p>
+                    <div class="row text-center mt-3">
+                        <div class="col-md-6">
+                            <p class="mb-0"><small><strong>Skor:</strong> <span id="detailScore"></span></small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-0"><small><strong>Tip:</strong> <span id="detailType"></span></small></p>
+                        </div>
+                    </div>
+                    <div class="row text-center mt-2" id="detailMetrics">
+                        {# Metrikler buraya JS ile yüklenecek #}
+                    </div>
+                    <p class="mt-3"><small>Etiketler: <span id="detailTags"></span></small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-success" id="detailLikeButton">❤️ Beğen (<span id="detailLikesCount">0</span>)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const searchForm = document.getElementById('searchForm');
             const loadingDiv = document.getElementById('loading');
             const resultsDiv = document.getElementById('results');
             const sortSelect = document.getElementById('sortBy');
-            const sortOrderSelect = document.getElementById('sortOrder'); // Yeni eklenen sıralama yönü select'i
+            const sortOrderSelect = document.getElementById('sortOrder');
+
+            const detailModal = new bootstrap.Modal(document.getElementById('documentDetailModal'));
+            const detailTitle = document.getElementById('detailTitle');
+            const detailCategory = document.getElementById('detailCategory');
+            const detailPublishedAt = document.getElementById('detailPublishedAt');
+            const detailContent = document.getElementById('detailContent');
+            const detailScore = document.getElementById('detailScore');
+            const detailType = document.getElementById('detailType');
+            const detailMetrics = document.getElementById('detailMetrics');
+            const detailTags = document.getElementById('detailTags');
+            const detailLikeButton = document.getElementById('detailLikeButton');
+            const detailLikesCount = document.getElementById('detailLikesCount');
 
             let currentQuery = '';
             let currentPage = 1;
-            let currentType = ''; // 'contentType' yerine 'currentType'
-            let currentSortBy = 'finalScore'; // Varsayılan sıralama alanı
-            let currentSortOrder = 'desc'; // Varsayılan sıralama yönü
+            let currentType = '';
+            let currentSortBy = 'finalScore';
+            let currentSortOrder = 'desc';
 
-            // Sayfa yüklendiğinde veya sıralama değiştiğinde tetiklenecek olaylar
+            let currentDocumentId = null; // Detayı açılan doküman ID'si
+
             searchForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 currentQuery = document.getElementById('searchQuery').value;
                 currentType = document.getElementById('contentType').value;
-                currentPage = 1; // Yeni arama yapıldığında sayfayı sıfırla
+                currentPage = 1;
                 performSearch();
             });
 
@@ -94,29 +142,28 @@
                 performSearch();
             });
 
-            sortOrderSelect.addEventListener('change', function() { // Yeni: Sıralama yönü değiştiğinde
+            sortOrderSelect.addEventListener('change', function() {
                 currentSortOrder = sortOrderSelect.value;
                 performSearch();
             });
 
-            // İlk yüklemede tüm sonuçları göstermek için
-            performSearch();
+            performSearch(); // İlk yüklemede tüm sonuçları göstermek için
 
 
             function performSearch() {
                 loadingDiv.style.display = 'block';
-                resultsDiv.innerHTML = ''; // Önceki sonuçları temizle
+                resultsDiv.innerHTML = '';
 
                 const params = new URLSearchParams({
                     q: currentQuery,
                     page: currentPage,
                     limit: 10,
-                    sort: currentSortBy, // 'sortSelect.value' yerine 'currentSortBy'
-                    order: currentSortOrder // Yeni: 'order' parametresini ekle
+                    sort: currentSortBy,
+                    order: currentSortOrder
                 });
 
                 if (currentType) {
-                    params.append('type', currentType); // 'content_type' yerine 'type'
+                    params.append('type', currentType);
                 }
 
                 fetch(`/api/search?${params}`)
@@ -129,6 +176,7 @@
                     .then(data => {
                         loadingDiv.style.display = 'none';
                         displayResults(data);
+                        setupPagination(data.meta);
                     })
                     .catch(error => {
                         loadingDiv.style.display = 'none';
@@ -146,35 +194,38 @@
                 let html = '<div class="row">';
 
                 data.data.forEach(item => {
+                    const cardId = `document-card-${item.id}`;
                     const typeIcon = item.type === 'video' ? '🎥' : '📄';
                     const typeBadge = item.type === 'video' ? 'bg-primary' : 'bg-secondary';
-
-                    // Tarih formatlama
-                    const formattedDate = item.publishedAt ? new Date(item.publishedAt.date || item.publishedAt).toLocaleDateString('tr-TR') : 'Bilinmiyor';
+                    const formattedDate = item.publishedAt ? new Date(item.publishedAt).toLocaleDateString('tr-TR') : 'Bilinmiyor';
 
                     html += `
                         <div class="col-md-6 mb-3">
-                            <div class="card h-100">
+                            <div class="card h-100" id="${cardId}" data-document-id="${item.id}" data-document-type="${item.type}">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h6 class="card-title">${typeIcon} ${item.title || 'Başlık Yok'}</h6>
+                                        <h6 class="card-title">
+                                            <a href="#" class="text-decoration-none text-dark document-title" data-id="${item.id}">
+                                                ${typeIcon} ${item.title || 'Başlık Yok'}
+                                            </a>
+                                        </h6>
                                         <div>
                                             <span class="badge ${typeBadge}">${item.type || 'Bilinmiyor'}</span>
-                                            <span class="badge bg-success ms-1">Skor: ${parseFloat(item.finalScore).toFixed(2)}</span>
+                                            <span class="badge bg-success ms-1 card-score">Skor: ${parseFloat(item.finalScore).toFixed(2)}</span>
                                         </div>
                                     </div>
-                                    <p class="card-text text-muted small">${(item.content || '').substring(0, 100)}...</p> {# Null kontrolü eklendi #}
+                                    <p class="card-text text-muted small">${(item.content || '').substring(0, 100)}...</p>
                                     <p class="card-text small">Yayınlanma Tarihi: ${formattedDate}</p>
                                     <div class="row text-center mt-2">
                                         ${item.type === 'video' ? `
-                                            <div class="col-6"><small><strong>${item.views || 0}</strong><br>Görüntülenme</small></div>
-                                            <div class="col-6"><small><strong>${item.likes || 0}</strong><br>Beğeni</small></div>
+                                            <div class="col-6"><small><strong>Görüntülenme:</strong> <span class="card-views-count">${item.views || 0}</span></small></div>
+                                            <div class="col-6"><small><strong>Beğeni:</strong> <span class="card-likes-count">${item.likes || 0}</span></small></div>
                                         ` : `
-                                            <div class="col-6"><small><strong>${item.readingTime || 0}</strong><br>Okuma Süresi</small></div>
-                                            <div class="col-6"><small><strong>${item.reactions || 0}</strong><br>Reaksiyon</small></div>
+                                            <div class="col-6"><small><strong>Okuma Süresi:</strong> ${item.readingTime || 0} dk</small></div>
+                                            <div class="col-6"><small><strong>Reaksiyon:</strong> <span class="card-reactions-count">${item.reactions || 0}</span></small></div>
                                         `}
                                     </div>
-                                    ${item.url ? `<a href="${item.url}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">Görüntüle</a>` : ''}
+                                    <button class="btn btn-sm btn-outline-primary mt-2 view-detail-button" data-id="${item.id}">Detayı Görüntüle</button>
                                 </div>
                             </div>
                         </div>
@@ -183,7 +234,139 @@
 
                 html += '</div>';
                 resultsDiv.innerHTML = html;
+
+                document.querySelectorAll('.document-title, .view-detail-button').forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const docId = this.dataset.id;
+                        fetchDocumentDetail(docId);
+                    });
+                });
             }
+
+            function fetchDocumentDetail(id) {
+                fetch(`/api/documents/${id}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(item => {
+                        currentDocumentId = item.id;
+
+                        detailTitle.textContent = item.title || 'Başlık Yok';
+                        detailCategory.textContent = item.category || 'Yok';
+                        detailPublishedAt.textContent = item.publishedAt ? new Date(item.publishedAt).toLocaleDateString('tr-TR') : 'Bilinmiyor';
+                        detailContent.textContent = item.content || 'İçerik Yok';
+                        detailScore.textContent = parseFloat(item.finalScore).toFixed(2);
+                        detailType.textContent = item.type || 'Bilinmiyor';
+                        detailTags.textContent = (item.tags && item.tags.length > 0) ? item.tags.join(', ') : 'Yok';
+
+                        let metricsHtml = '';
+                        if (item.type === 'video') {
+                            metricsHtml = `
+                                <div class="col-6"><small><strong>Görüntülenme:</strong> ${item.views || 0}</small></div>
+                                <div class="col-6"><small><strong>Beğeni:</strong> ${item.likes || 0}</small></div>
+                            `;
+                        } else {
+                            metricsHtml = `
+                                <div class="col-6"><small><strong>Okuma Süresi:</strong> ${item.readingTime || 0} dk</small></div>
+                                <div class="col-6"><small><strong>Reaksiyon:</strong> ${item.reactions || 0}</small></div>
+                            `;
+                        }
+                        detailMetrics.innerHTML = metricsHtml;
+
+                        detailLikesCount.textContent = item.likes || 0;
+                        detailLikeButton.dataset.id = item.id;
+
+                        // Ana dashboard kartındaki metrikleri güncelle (görüntüleme sonrası)
+                        updateCardMetrics(
+                            item.id,
+                            item.views, // <<<--- BURADA newViews olarak gönderiliyor
+                            item.likes,
+                            item.reactions,
+                            item.finalScore,
+                            item.type
+                        );
+
+                        detailModal.show();
+                    })
+                    .catch(error => {
+                        console.error(`Doküman detayı çekme hatası (ID: ${id}):`, error);
+                        alert('Doküman detayları yüklenirken bir hata oluştu. Konsolu kontrol edin.');
+                    });
+            }
+
+            detailLikeButton.addEventListener('click', function() {
+                if (!currentDocumentId) {
+                    console.error('Beğenme işlemi için doküman ID bulunamadı.');
+                    return;
+                }
+                fetch(`/api/documents/${currentDocumentId}/like`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Modal içindeki değerleri güncelle
+                        detailLikesCount.textContent = data.new_likes;
+                        detailScore.textContent = parseFloat(data.new_score).toFixed(2);
+
+                        // Ana dashboard kartındaki skoru ve beğeniyi/reaksiyonu da güncelle
+                        const cardElement = document.getElementById(`document-card-${currentDocumentId}`);
+                        if (cardElement) {
+                            const documentType = cardElement.dataset.documentType;
+                            updateCardMetrics(
+                                currentDocumentId,
+                                null, // Views değişmediği için null
+                                data.new_likes,
+                                data.new_reactions, // Reaksiyonlar da güncellenmeli
+                                data.new_score,
+                                documentType
+                            );
+                        }
+                        console.log('Doküman beğenildi:', data);
+                    })
+                    .catch(error => {
+                        console.error('Beğenme hatası:', error);
+                        alert('Beğenme işlemi sırasında bir hata oluştu.');
+                    });
+            });
+
+            function updateCardMetrics(docId, newViews, newLikes, newReactions, newScore, docType) {
+                const cardElement = document.getElementById(`document-card-${docId}`);
+                if (!cardElement) return;
+
+                const scoreSpan = cardElement.querySelector('.card-score');
+                if (scoreSpan && newScore !== null) {
+                    scoreSpan.textContent = `Skor: ${parseFloat(newScore).toFixed(2)}`;
+                }
+
+                if (docType === 'video') {
+                    const viewsSpan = cardElement.querySelector('.card-views-count');
+                    const likesSpan = cardElement.querySelector('.card-likes-count');
+                    if (viewsSpan && newViews !== null) {
+                        viewsSpan.textContent = newViews;
+                    }
+                    if (likesSpan && newLikes !== null) {
+                        likesSpan.textContent = newLikes;
+                    }
+                } else { // text
+                    const reactionsSpan = cardElement.querySelector('.card-reactions-count');
+                    if (reactionsSpan && newReactions !== null) { // Text için reaksiyonları güncelle
+                        reactionsSpan.textContent = newReactions;
+                    }
+                }
+            }
+
 
             // Sayfalama fonksiyonu
             function setupPagination(meta) {
@@ -197,15 +380,23 @@
                 }
                 paginationNav.style.display = 'block';
 
-                // Önceki sayfa butonu
-                paginationUl.innerHTML += `
-                    <li class="page-item ${meta.page === 1 ? 'disabled' : ''}">
-                        <a class="page-link" href="#" data-page="${meta.page - 1}">Önceki</a>
-                    </li>
-                `;
+                const maxPagesToShow = 5;
+                let startPage = Math.max(1, meta.page - Math.floor(maxPagesToShow / 2));
+                let endPage = Math.min(meta.pages, startPage + maxPagesToShow - 1);
 
-                // Sayfa numaraları
-                for (let i = 1; i <= meta.pages; i++) {
+                // Eğer son sayfalara yakınsak, başlangıcı ayarla
+                if (endPage - startPage + 1 < maxPagesToShow && meta.pages > maxPagesToShow) {
+                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                }
+
+                if (startPage > 1) {
+                    paginationUl.innerHTML += `<li class="page-item"><a class="page-link" href="#" data-page="1">İlk</a></li>`;
+                    if (startPage > 2) {
+                        paginationUl.innerHTML += `<li class="page-item disabled"><a class="page-link" href="#">...</a></li>`;
+                    }
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
                     paginationUl.innerHTML += `
                         <li class="page-item ${meta.page === i ? 'active' : ''}">
                             <a class="page-link" href="#" data-page="${i}">${i}</a>
@@ -213,19 +404,31 @@
                     `;
                 }
 
-                // Sonraki sayfa butonu
-                paginationUl.innerHTML += `
-                    <li class="page-item ${meta.page === meta.pages ? 'disabled' : ''}">
-                        <a class="page-link" href="#" data-page="${meta.page + 1}">Sonraki</a>
-                    </li>
-                `;
+                if (endPage < meta.pages) {
+                    if (endPage < meta.pages -1) {
+                        paginationUl.innerHTML += `<li class="page-item disabled"><a class="page-link" href="#">...</a></li>`;
+                    }
+                    paginationUl.innerHTML += `<li class="page-item"><a class="page-link" href="#" data-page="${meta.pages}">Son</a></li>`;
+                }
+
+
+                // Önceki/Sonraki butonlarını sayfa numaralarından sonra veya önce ekle
+                const prevButton = `<li class="page-item ${meta.page === 1 ? 'disabled' : ''}">
+                                    <a class="page-link" href="#" data-page="${meta.page - 1}">Önceki</a>
+                                </li>`;
+                const nextButton = `<li class="page-item ${meta.page === meta.pages ? 'disabled' : ''}">
+                                    <a class="page-link" href="#" data-page="${meta.page + 1}">Sonraki</a>
+                                </li>`;
+
+                paginationUl.innerHTML = prevButton + paginationUl.innerHTML + nextButton;
+
 
                 // Sayfa butonlarına tıklama olayları
                 paginationUl.querySelectorAll('.page-link').forEach(link => {
                     link.addEventListener('click', function(e) {
                         e.preventDefault();
                         const page = parseInt(this.dataset.page);
-                        if (page > 0 && page <= meta.pages) {
+                        if (!Number.isNaN(page) && page > 0 && page <= meta.pages) {
                             currentPage = page;
                             performSearch();
                         }

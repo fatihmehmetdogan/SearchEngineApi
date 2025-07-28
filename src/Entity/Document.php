@@ -49,19 +49,19 @@ class Document
     private string $type = 'text';
 
     #[ORM\Column(type: 'integer', options: ['default' => 0])]
-    #[Groups(['document:read', 'document:write'])]
+    #[Groups(['document:read', 'document:write', 'search:read'])]
     private int $views = 0;
 
     #[ORM\Column(type: 'integer', options: ['default' => 0])]
-    #[Groups(['document:read', 'document:write'])]
+    #[Groups(['document:read', 'document:write', 'search:read'])]
     private int $likes = 0;
 
     #[ORM\Column(type: 'integer', nullable: true)]
-    #[Groups(['document:read', 'document:write'])]
+    #[Groups(['document:read', 'document:write', 'search:read'])]
     private ?int $readingTime = null;
 
     #[ORM\Column(type: 'integer', nullable: true)]
-    #[Groups(['document:read', 'document:write'])]
+    #[Groups(['document:read', 'document:write', 'search:read'])]
     private ?int $reactions = null;
 
     #[ORM\Column(type: 'float', options: ['default' => 0])]
